@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 
 import { authenticateUser } from '../services/auth.service';
 
-// Controller handles request/response
+// Controlador que manipula requisição/resposta
 
 export const login = async (req: Request, res: Response) => {
 

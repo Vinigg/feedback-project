@@ -1,4 +1,4 @@
-// Business logic for authentication
+// Lógica de negócio para autenticação
 
 const MOCK_USER = {
 
@@ -26,7 +26,7 @@ export const authenticateUser = (email: string, password: string) => {
 
   } else {
 
-    throw new Error('Invalid credentials');
+    throw new Error('Credenciais inválidas');
 
   }
 
