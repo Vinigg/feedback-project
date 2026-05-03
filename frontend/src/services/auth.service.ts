@@ -1,41 +1,36 @@
-// Service for authentication requests
+// Serviço para requisições de autenticação
 
-export interface LoginResponse {
+import { LoginRequest, LoginResponse, AuthError } from '../types/auth.types';
 
-  success: boolean;
-
-  user?: { name: string; email: string };
-
-  token?: string;
-
-  message?: string;
-
-}
-
+/**
+ * Envia requisição de login para a API do backend
+ * 
+ * @param email - Email do usuário
+ * @param password - Senha do usuário
+ * @returns Promise com LoginResponse contendo dados do usuário e token
+ * @throws AuthError se as credenciais forem inválidas ou a requisição falhar
+ */
 export const loginRequest = async (email: string, password: string): Promise<LoginResponse> => {
+  try {
+    const response = await fetch('http://localhost:3000/api/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, password } as LoginRequest),
+    });
 
-  const response = await fetch('http://localhost:3000/api/auth/login', {
+    const data: LoginResponse = await response.json();
 
-    method: 'POST',
+    if (!response.ok) {
+      throw new AuthError(data.message || 'Falha ao fazer login');
+    }
 
-    headers: {
-
-      'Content-Type': 'application/json',
-
-    },
-
-    body: JSON.stringify({ email, password }),
-
-  });
-
-  const data: LoginResponse = await response.json();
-
-  if (!response.ok) {
-
-    throw new Error(data.message || 'Login failed');
-
+    return data;
+  } catch (error) {
+    if (error instanceof AuthError) {
+      throw error;
+    }
+    throw new AuthError('Falha ao conectar com o servidor');
   }
-
-  return data;
-
 };
