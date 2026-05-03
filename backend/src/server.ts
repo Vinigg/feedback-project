@@ -14,14 +14,14 @@ app.use(cors());
 
 app.use(express.json());
 
-// Routes
+// Rotas
 
 app.use('/api/auth', authRoutes);
 
-// Start server
+// Iniciar servidor
 
 app.listen(PORT, () => {
 
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Servidor rodando na porta ${PORT}`);
 
 });
