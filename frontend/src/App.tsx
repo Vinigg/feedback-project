@@ -34,16 +34,17 @@ function App() {
         {/* Rotas Públicas */}
         <Route path="/login" element={<Login />} />
 
-        {/* Rotas Protegidas */}
+        {/* Rotas exclusivas de Líder */}
         <Route
           path="/dashboard"
           element={
-            <PrivateRoute>
+            <PrivateRoute allowedRoles={['leader']}>
               <Dashboard />
             </PrivateRoute>
           }
         />
 
+        {/* Rotas compartilhadas (líder e liderado) */}
         <Route
           path="/feedbacks"
           element={

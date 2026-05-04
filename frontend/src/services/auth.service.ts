@@ -1,6 +1,7 @@
 // Serviço para requisições de autenticação
 
-import { LoginRequest, LoginResponse, AuthError } from '../types/auth.types';
+import type { LoginRequest, LoginResponse } from '../types/auth.types';
+import { AuthError } from '../types/auth.types';
 
 /**
  * Envia requisição de login para a API do backend

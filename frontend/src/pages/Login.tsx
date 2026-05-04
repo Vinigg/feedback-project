@@ -1,4 +1,5 @@
-import { useState, FC, FormEvent } from 'react';
+import { useState } from 'react';
+import type { FC, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { loginRequest } from '../services/auth.service';
 import { AuthError } from '../types/auth.types';
@@ -36,13 +37,14 @@ const Login: FC = () => {
     try {
       const response = await loginRequest(email, password);
 
-      if (response.success && response.token) {
+      if (response.success && response.token && response.user) {
         localStorage.setItem('token', response.token);
+        localStorage.setItem('user', JSON.stringify(response.user));
         setSuccess('Login realizado com sucesso! Redirecionando...');
-        
-        // Redireciona para dashboard após 1 segundo
+
+        const destination = response.user.role === 'leader' ? '/dashboard' : '/feedbacks';
         setTimeout(() => {
-          navigate('/dashboard');
+          navigate(destination);
         }, 1000);
       }
     } catch (err) {
@@ -92,7 +94,8 @@ const Login: FC = () => {
       {success && <p style={{ color: 'green', marginTop: '10px' }}>{success}</p>}
 
       <p style={{ marginTop: '20px', fontSize: '14px' }}>
-        Credenciais de teste: admin@email.com / 123456
+        Líder: lider@email.com / 123456<br />
+        Liderado: liderado@email.com / 123456
       </p>
     </div>
   );
