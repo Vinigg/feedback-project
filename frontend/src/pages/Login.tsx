@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { FC, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { loginRequest } from '../services/auth.service';
+import { loginRequest, validateEmail, validatePassword } from '../services/auth.service';
 import { AuthError } from '../types/auth.types';
 
 /**
@@ -14,12 +14,22 @@ import { AuthError } from '../types/auth.types';
 
 const Login: FC = () => {
   const navigate = useNavigate();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Limpar timeout quando o componente desmontar
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -33,6 +43,22 @@ const Login: FC = () => {
     }
 
     setLoading(true);
+
+    timeoutRef.current = setTimeout(() => {
+      setLoading(false);
+    }, 4000);
+
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.isValid) {
+      setError(emailValidation.error || 'Invalid email');
+      return;
+    }
+    
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.isValid) {
+      setError(passwordValidation.error || 'Invalid password');
+      return;
+    }
 
     try {
       const response = await loginRequest(email, password);
@@ -54,6 +80,9 @@ const Login: FC = () => {
         setError('Ocorreu um erro inesperado');
       }
     } finally {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
       setLoading(false);
     }
   };
