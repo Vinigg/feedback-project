@@ -35,3 +35,17 @@ export const loginRequest = async (email: string, password: string): Promise<Log
     throw new AuthError('Falha ao conectar com o servidor');
   }
 };
+
+export const validateEmail = (email: string): { isValid: boolean; error?: string } => {
+  if (!email.endsWith('@email.com')) {
+    return { isValid: false, error: 'o Email utilizado não é válido' };
+  }
+  return { isValid: true };
+};
+
+export const validatePassword = (password: string): { isValid: boolean; error?: string } => {
+  if (password.length < 6) {
+    return { isValid: false, error: 'A senha deve conter pelo menos 6 caracteres' };
+  }
+  return { isValid: true };
+};
