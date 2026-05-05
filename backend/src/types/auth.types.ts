@@ -5,9 +5,12 @@ export interface LoginRequest {
   password: string;
 }
 
+export type UserRole = 'leader' | 'employee';
+
 export interface User {
   name: string;
   email: string;
+  role: UserRole;
 }
 
 export interface LoginResponse {
