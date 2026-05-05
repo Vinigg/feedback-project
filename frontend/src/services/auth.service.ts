@@ -36,6 +36,18 @@ export const loginRequest = async (email: string, password: string): Promise<Log
   }
 };
 
+export const getAuthenticatedUser = (): LoginResponse['user'] | null => {
+  const raw = localStorage.getItem('user');
+  if (!raw) {
+    return null;
+  }
+  try {
+    return JSON.parse(raw) as LoginResponse['user'];
+  } catch {
+    return null;
+  }
+};
+
 export const validateEmail = (email: string): { isValid: boolean; error?: string } => {
   if (!email.endsWith('@email.com')) {
     return { isValid: false, error: 'o Email utilizado não é válido' };

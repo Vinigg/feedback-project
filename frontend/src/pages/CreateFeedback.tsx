@@ -10,7 +10,7 @@ export const CreateFeedback = () => {
     <div style={{ padding: '20px' }}>
       <h1>Criar Feedback</h1>
       <p>Crie um novo feedback aqui.</p>
-      <p>Esta é uma rota protegida. Você precisa estar autenticado para acessá-la.</p>
+      <p>Use o formulário abaixo para criar um novo feedback.</p>
     </div>
   );
 };

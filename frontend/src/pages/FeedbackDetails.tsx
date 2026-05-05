@@ -17,7 +17,7 @@ export const FeedbackDetails = () => {
     <div style={{ padding: '20px' }}>
       <h1>Detalhes do Feedback</h1>
       <p>Visualizando feedback com ID: {id}</p>
-      <p>Esta é uma rota protegida. Você precisa estar autenticado para acessá-la.</p>
+      <p>Confira a descrição, autor e status deste feedback.</p>
     </div>
   );
 };
