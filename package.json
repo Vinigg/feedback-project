@@ -1,5 +1,12 @@
 {
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm --prefix backend run dev\" \"npm --prefix frontend run dev\""
+  },
   "dependencies": {
     "react-router-dom": "^7.14.2"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
   }
 }

@@ -44,21 +44,23 @@ const Login: FC = () => {
 
     setLoading(true);
 
-    timeoutRef.current = setTimeout(() => {
-      setLoading(false);
-    }, 4000);
-
     const emailValidation = validateEmail(email);
     if (!emailValidation.isValid) {
-      setError(emailValidation.error || 'Invalid email');
+      setError(emailValidation.error || 'Email inválido');
+      setLoading(false);
       return;
     }
     
     const passwordValidation = validatePassword(password);
     if (!passwordValidation.isValid) {
-      setError(passwordValidation.error || 'Invalid password');
+      setError(passwordValidation.error || 'Senha inválida');
+      setLoading(false);
       return;
     }
+
+    timeoutRef.current = setTimeout(() => {
+      setLoading(false);
+    }, 4000);
 
     try {
       const response = await loginRequest(email, password);
@@ -68,7 +70,12 @@ const Login: FC = () => {
         localStorage.setItem('user', JSON.stringify(response.user));
         setSuccess('Login realizado com sucesso! Redirecionando...');
 
-        const destination = response.user.role === 'leader' ? '/dashboard' : '/feedbacks';
+        const destination =
+          response.user.role === 'admin' || response.user.role === 'leader'
+            ? '/dashboard'
+            : response.user.role === 'rh'
+            ? '/profile'
+            : '/feedbacks';
         setTimeout(() => {
           navigate(destination);
         }, 1000);
@@ -123,8 +130,10 @@ const Login: FC = () => {
       {success && <p style={{ color: 'green', marginTop: '10px' }}>{success}</p>}
 
       <p style={{ marginTop: '20px', fontSize: '14px' }}>
+        Admin: admin@email.com / 123456<br />
         Líder: lider@email.com / 123456<br />
-        Liderado: liderado@email.com / 123456
+        RH: rh@email.com / 123456<br />
+        Colaborador: colaborador@email.com / 123456
       </p>
     </div>
   );

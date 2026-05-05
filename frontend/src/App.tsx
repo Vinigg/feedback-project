@@ -38,7 +38,7 @@ function App() {
         <Route
           path="/dashboard"
           element={
-            <PrivateRoute allowedRoles={['leader']}>
+            <PrivateRoute allowedRoles={['admin', 'leader']}>
               <Dashboard />
             </PrivateRoute>
           }
@@ -48,7 +48,7 @@ function App() {
         <Route
           path="/feedbacks"
           element={
-            <PrivateRoute>
+            <PrivateRoute allowedRoles={['employee']}>
               <Feedbacks />
             </PrivateRoute>
           }
@@ -57,7 +57,7 @@ function App() {
         <Route
           path="/feedbacks/create"
           element={
-            <PrivateRoute>
+            <PrivateRoute allowedRoles={['employee']}>
               <CreateFeedback />
             </PrivateRoute>
           }
@@ -66,7 +66,7 @@ function App() {
         <Route
           path="/feedbacks/:id"
           element={
-            <PrivateRoute>
+            <PrivateRoute allowedRoles={['employee']}>
               <FeedbackDetails />
             </PrivateRoute>
           }
@@ -75,14 +75,14 @@ function App() {
         <Route
           path="/profile"
           element={
-            <PrivateRoute>
+            <PrivateRoute allowedRoles={['rh']}>
               <Profile />
             </PrivateRoute>
           }
         />
 
         {/* Rota Padrão */}
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/" element={<Navigate to="/login" replace />} />
       </Routes>
     </Router>
   );

@@ -5,7 +5,7 @@ export interface LoginRequest {
   password: string;
 }
 
-export type UserRole = 'leader' | 'employee';
+export type UserRole = 'admin' | 'leader' | 'rh' | 'employee';
 
 export interface User {
   name: string;

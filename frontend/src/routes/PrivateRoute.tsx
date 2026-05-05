@@ -27,8 +27,19 @@ export const PrivateRoute = ({ children, allowedRoles }: PrivateRouteProps) => {
     const user = raw ? JSON.parse(raw) : null;
     const role: UserRole | undefined = user?.role;
 
+    if (!role) {
+      return <Navigate to="/login" replace />;
+    }
+
     if (!role || !allowedRoles.includes(role)) {
-      const fallback = role === 'leader' ? '/dashboard' : '/feedbacks';
+      let fallback = '/login';
+      if (role === 'leader' || role === 'admin') {
+        fallback = '/dashboard';
+      } else if (role === 'rh') {
+        fallback = '/profile';
+      } else if (role === 'employee') {
+        fallback = '/feedbacks';
+      }
       return <Navigate to={fallback} replace />;
     }
   }
