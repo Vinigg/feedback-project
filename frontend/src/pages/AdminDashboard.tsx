@@ -88,15 +88,15 @@ export default function AdminDashboard() {
         <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-white rounded-xl p-4 sm:p-6 border border-border">
             <p className="text-sm text-muted-foreground mb-1">Total de Cargos</p>
-            <p className="text-2xl sm:text-3xl">8</p>
+            <p className="text-2xl sm:text-3xl font-semibold">8</p>
           </div>
           <div className="bg-white rounded-xl p-4 sm:p-6 border border-border">
             <p className="text-sm text-muted-foreground mb-1">Perguntas Ativas</p>
-            <p className="text-2xl sm:text-3xl">24</p>
+            <p className="text-2xl sm:text-3xl font-semibold">24</p>
           </div>
           <div className="bg-white rounded-xl p-4 sm:p-6 border border-border">
             <p className="text-sm text-muted-foreground mb-1">Colaboradores</p>
-            <p className="text-2xl sm:text-3xl">156</p>
+            <p className="text-2xl sm:text-3xl font-semibold">156</p>
           </div>
         </div>
       </div>

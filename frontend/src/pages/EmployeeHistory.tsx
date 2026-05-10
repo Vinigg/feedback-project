@@ -69,8 +69,8 @@ export default function EmployeeHistory() {
 
   const filteredEvaluations = mockEvaluations.filter((item) => {
     const matchesSearch = item.project.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.technicalLeader?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.behavioralLeader?.toLowerCase().includes(searchTerm.toLowerCase());
+                         (item.technicalLeader?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
+                         (item.behavioralLeader?.toLowerCase().includes(searchTerm.toLowerCase()) || false);
     const matchesProject = selectedProject === 'Todos' || item.project === selectedProject;
     const matchesDate = !dateFilter || item.date.startsWith(dateFilter);
 
