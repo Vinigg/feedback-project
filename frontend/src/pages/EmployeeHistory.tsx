@@ -46,6 +46,20 @@ export default function EmployeeHistory() {
   const [month, setMonth] = useState('Todos');
   const [expanded, setExpanded] = useState<string | null>(null);
   const navigate = useNavigate();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedProject, setSelectedProject] = useState('Todos');
+  const [dateFilter, setDateFilter] = useState('');
+  const [expandedEval, setExpandedEval] = useState<string | null>(null);
+
+  const filteredEvaluations = mockEvaluations.filter((item) => {
+    const matchesSearch = item.project.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (item.technicalLeader?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
+                         (item.behavioralLeader?.toLowerCase().includes(searchTerm.toLowerCase()) || false);
+    const matchesProject = selectedProject === 'Todos' || item.project === selectedProject;
+    const matchesDate = !dateFilter || item.date.startsWith(dateFilter);
+
+    return matchesSearch && matchesProject && matchesDate;
+  });
 
   const filtered = useMemo(() => {
     return evaluations.filter((item) => {
