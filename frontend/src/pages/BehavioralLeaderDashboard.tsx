@@ -100,7 +100,7 @@ export default function BehavioralLeaderDashboard() {
             </div>
             <div>
               <h1 className="text-lg sm:text-xl">Dashboard do Líder Comportamental</h1>
-              <p className="text-xs sm:text-sm text-muted-foreground">Avaliação de Performance Comportamental</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">Avaliação de Soft Skills e Comportamento</p>
             </div>
           </div>
           <button
