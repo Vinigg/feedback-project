@@ -1,5 +1,5 @@
-import { useNavigate } from "react-router-dom";
-import { Settings, Users, FileQuestion, LogOut, BarChart3 } from "lucide-react";
+import { useNavigate } from 'react-router-dom';
+import { Settings, Users, FileQuestion, LogOut, BarChart3 } from 'lucide-react';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
