@@ -80,35 +80,47 @@ export default function LoginPage() {
                   type="text"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="seu.email@empresa.com ou ID"
-                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-border bg-input-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition"
+                  placeholder="email@empresa.com"
+                  className="w-full pl-11 pr-4 py-3 sm:py-3.5 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                  disabled={isLoading}
+                  autoFocus
                 />
               </div>
             </div>
 
             <button
               type="submit"
-              disabled={isLoading}
-              className="w-full bg-primary text-primary-foreground rounded-xl py-3 font-semibold hover:bg-primary/90 transition disabled:opacity-50 flex items-center justify-center gap-2"
+              disabled={isLoading || !email.trim()}
+              className="w-full flex items-center justify-center gap-2 py-3 sm:py-3.5 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
-                  Entrando...
-                </>
+                <span>Entrando...</span>
               ) : (
                 <>
-                  Entrar
-                  <ArrowRight className="w-4 h-4" />
+                  <span>Entrar</span>
+                  <ArrowRight className="w-5 h-5" />
                 </>
               )}
             </button>
           </form>
 
-          <div className="mt-6 p-4 bg-secondary/10 rounded-lg border border-secondary/20">
-            <p className="text-xs text-muted-foreground text-center">
-              <strong>Demo:</strong> Use "admin", "carlos", "ana" ou deixe em branco para collaborador
-            </p>
+          <div className="mt-6 pt-6 border-t border-border">
+            <div className="flex items-center gap-2 text-muted-foreground justify-center">
+              <Lock className="w-4 h-4" />
+              <span className="text-xs sm:text-sm">Conexão segura e encriptada</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 space-y-2">
+          <p className="text-center text-muted-foreground text-xs sm:text-sm">
+            O sistema reconhece automaticamente o seu perfil
+          </p>
+          <div className="text-center text-muted-foreground text-xs space-y-1">
+            <p>Demo: 'admin@empresa.com' (Administrador)</p>
+            <p>'tech@empresa.com' (Líder Técnico)</p>
+            <p>'rh@empresa.com' (Líder Comportamental)</p>
+            <p>'joao@empresa.com' (Colaborador)</p>
           </div>
         </div>
       </div>
