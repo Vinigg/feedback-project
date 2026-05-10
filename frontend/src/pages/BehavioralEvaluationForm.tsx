@@ -1,231 +1,96 @@
-import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Upload, Save, CheckCircle, Calendar } from "lucide-react";
-
-interface MonthlyAnnotation {
-  destaqueComportamental: string;
-  antecipacaoRiscos: string;
-  apoioColegas: string;
-  qualidadeComunicacao: string;
-  iniciativa: string;
-}
+import { useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 
 export default function BehavioralEvaluationForm() {
-  const navigate = useNavigate();
   const { projectId, employeeId } = useParams();
+  const [month, setMonth] = useState('Jan 2026');
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState('');
+  const navigate = useNavigate();
 
-  const [annotation, setAnnotation] = useState<MonthlyAnnotation>({
-    destaqueComportamental: '',
-    antecipacaoRiscos: '',
-    apoioColegas: '',
-    qualidadeComunicacao: '',
-    iniciativa: ''
-  });
-
-  const [selectedMonth, setSelectedMonth] = useState('2026-04');
-  const [files, setFiles] = useState<File[]>([]);
-  const [isSaving, setIsSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setFiles(Array.from(e.target.files));
-    }
-  };
-
-  const handleSave = () => {
-    setIsSaving(true);
+  function handleSave() {
+    setLoading(true);
+    setSuccess('');
     setTimeout(() => {
-      setIsSaving(false);
-      setSaved(true);
-      setTimeout(() => {
-        navigate('/behavioral-leader');
-      }, 1500);
-    }, 1000);
-  };
+      setLoading(false);
+      setSuccess('Avaliação comportamental salva com sucesso.');
+    }, 900);
+  }
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="bg-white border-b border-border sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
+      <header className="sticky top-0 z-10 border-b border-border bg-white px-6 py-4">
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-sm text-muted-foreground">Avaliação Comportamental</p>
+            <h1 className="text-2xl font-semibold text-slate-950">Avaliação Comportamental</h1>
+            <p className="text-sm text-slate-600">Projeto {projectId} • Colaborador {employeeId}</p>
+          </div>
           <button
-            onClick={() => navigate('/behavioral-leader')}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-3 sm:mb-4 transition-colors text-sm sm:text-base"
+            onClick={() => navigate('/')}
+            className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
           >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Voltar ao Dashboard</span>
+            Sair
           </button>
-          <h1 className="text-xl sm:text-2xl">Avaliação Comportamental</h1>
-          <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-            Projeto #{projectId} - Colaborador #{employeeId}
-          </p>
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        <div className="bg-white rounded-xl border border-border p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8">
-
-          {/* Month Selection */}
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <Calendar className="w-5 h-5 text-primary" />
-              <h3 className="text-base sm:text-lg">Período de Avaliação</h3>
-            </div>
-            <select
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className="w-full sm:w-auto px-4 py-2.5 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm sm:text-base"
-            >
-              <option value="2026-04">Abril 2026</option>
-              <option value="2026-03">Março 2026</option>
-              <option value="2026-02">Fevereiro 2026</option>
-              <option value="2026-01">Janeiro 2026</option>
-            </select>
-          </div>
-
-          <div className="border-t border-border" />
-
-          {/* Monthly Annotation Fields */}
-          <div>
-            <h2 className="mb-6">Anotações Mensais - Desempenho Comportamental</h2>
-            <div className="space-y-6">
-              <div>
-                <label className="block mb-2">
-                  Destaque de Comportamento
-                  <span className="text-muted-foreground text-sm ml-2">(Atitudes e comportamentos positivos)</span>
-                </label>
-                <textarea
-                  value={annotation.destaqueComportamental}
-                  onChange={(e) => setAnnotation({ ...annotation, destaqueComportamental: e.target.value })}
-                  placeholder="Descreva comportamentos, atitudes ou ações que se destacaram positivamente neste mês..."
-                  className="w-full min-h-[100px] p-3 sm:p-4 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 resize-y text-sm sm:text-base"
-                />
-              </div>
-
-              <div>
-                <label className="block mb-2">
-                  Antecipação de Riscos
-                  <span className="text-muted-foreground text-sm ml-2">(Identificação preventiva de problemas)</span>
-                </label>
-                <textarea
-                  value={annotation.antecipacaoRiscos}
-                  onChange={(e) => setAnnotation({ ...annotation, antecipacaoRiscos: e.target.value })}
-                  placeholder="Relate se o colaborador identificou e comunicou riscos ou problemas antes que se tornassem críticos..."
-                  className="w-full min-h-[100px] p-3 sm:p-4 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 resize-y text-sm sm:text-base"
-                />
-              </div>
-
-              <div>
-                <label className="block mb-2">
-                  Apoio aos Colegas
-                  <span className="text-muted-foreground text-sm ml-2">(Colaboração e suporte à equipe)</span>
-                </label>
-                <textarea
-                  value={annotation.apoioColegas}
-                  onChange={(e) => setAnnotation({ ...annotation, apoioColegas: e.target.value })}
-                  placeholder="Descreva como o colaborador apoiou, ajudou ou colaborou com outros membros da equipe..."
-                  className="w-full min-h-[100px] p-3 sm:p-4 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 resize-y text-sm sm:text-base"
-                />
-              </div>
-
-              <div>
-                <label className="block mb-2">
-                  Qualidade da Comunicação
-                  <span className="text-muted-foreground text-sm ml-2">(Clareza, assertividade e efetividade)</span>
-                </label>
-                <textarea
-                  value={annotation.qualidadeComunicacao}
-                  onChange={(e) => setAnnotation({ ...annotation, qualidadeComunicacao: e.target.value })}
-                  placeholder="Avalie como o colaborador se comunicou com a equipe, clareza nas informações, participação em reuniões..."
-                  className="w-full min-h-[100px] p-3 sm:p-4 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 resize-y text-sm sm:text-base"
-                />
-              </div>
-
-              <div>
-                <label className="block mb-2">
-                  Iniciativa
-                  <span className="text-muted-foreground text-sm ml-2">(Ações voluntárias e proatividade)</span>
-                </label>
-                <textarea
-                  value={annotation.iniciativa}
-                  onChange={(e) => setAnnotation({ ...annotation, iniciativa: e.target.value })}
-                  placeholder="Relate iniciativas voluntárias, melhorias propostas, ou ações proativas tomadas pelo colaborador..."
-                  className="w-full min-h-[100px] p-3 sm:p-4 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 resize-y text-sm sm:text-base"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t border-border" />
-
-          {/* File Upload */}
-          <div>
-            <div className="flex items-baseline gap-2 mb-2">
-              <h3 className="text-base sm:text-lg">Anexar Evidências</h3>
-              <span className="text-xs sm:text-sm text-muted-foreground">(opcional)</span>
-            </div>
-            <p className="text-xs sm:text-sm text-muted-foreground mb-4">
-              Adicione documentos, relatórios ou evidências comportamentais
-            </p>
-
-            <label className="flex items-center gap-3 px-4 sm:px-6 py-3 sm:py-4 bg-muted/50 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-muted/70 transition-colors">
-              <Upload className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
-              <span className="text-muted-foreground text-sm sm:text-base">
-                {files.length > 0
-                  ? `${files.length} arquivo(s) selecionado(s)`
-                  : 'Clique para selecionar arquivos'}
-              </span>
-              <input
-                type="file"
-                multiple
-                onChange={handleFileUpload}
-                className="hidden"
-              />
+      <main className="mx-auto max-w-4xl space-y-8 px-6 py-8">
+        <div className="rounded-3xl border border-border bg-white p-6 shadow-sm">
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="space-y-2 text-sm font-medium text-slate-700">
+              Mês
+              <select
+                value={month}
+                onChange={(event) => setMonth(event.target.value)}
+                className="w-full rounded-2xl border border-border bg-muted px-4 py-3 text-sm text-slate-900 outline-none"
+              >
+                <option>Jan 2026</option>
+                <option>Feb 2026</option>
+                <option>Mar 2026</option>
+                <option>Apr 2026</option>
+              </select>
             </label>
-
-            {files.length > 0 && (
-              <div className="mt-3 space-y-2">
-                {files.map((file, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
-                    <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                    <span className="truncate">{file.name}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+            <label className="space-y-2 text-sm font-medium text-slate-700">
+              Anexar arquivo (opcional)
+              <input type="file" className="w-full rounded-2xl border border-border bg-muted px-3 py-3 text-sm text-slate-900" />
+            </label>
           </div>
 
-          {/* Actions */}
-          <div className="flex flex-col sm:flex-row gap-3 pt-4">
+          <div className="mt-6 space-y-6">
+            {[
+              { label: 'Destaque de Comportamento', name: 'behaviorHighlight' },
+              { label: 'Antecipação de Riscos', name: 'riskAnticipation' },
+              { label: 'Apoio aos Colegas', name: 'teamSupport' },
+              { label: 'Qualidade da Comunicação', name: 'communicationQuality' },
+              { label: 'Iniciativa', name: 'initiative' },
+            ].map((field) => (
+              <label key={field.name} className="space-y-2 text-sm font-medium text-slate-700">
+                {field.label}
+                <textarea className="min-h-[120px] w-full rounded-3xl border border-border bg-muted px-4 py-4 text-sm text-slate-900 outline-none" />
+              </label>
+            ))}
+          </div>
+
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-end">
             <button
+              type="button"
               onClick={() => navigate('/behavioral-leader')}
-              className="w-full sm:w-auto px-6 py-3 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors order-2 sm:order-1"
+              className="rounded-2xl border border-border bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
             >
               Cancelar
             </button>
             <button
+              type="button"
               onClick={handleSave}
-              disabled={isSaving || saved}
-              className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 order-1 sm:order-2"
+              className="rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-white hover:bg-primary/90"
             >
-              {saved ? (
-                <>
-                  <CheckCircle className="w-5 h-5" />
-                  <span>Avaliação Salva</span>
-                </>
-              ) : isSaving ? (
-                <span>A salvar...</span>
-              ) : (
-                <>
-                  <Save className="w-5 h-5" />
-                  <span>Salvar Avaliação</span>
-                </>
-              )}
+              {loading ? 'Salvando...' : 'Salvar'}
             </button>
           </div>
+          {success && <p className="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{success}</p>}
         </div>
-      </div>
+      </main>
     </div>
   );
 }
