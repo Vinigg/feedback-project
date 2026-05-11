@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Building2, Lock, ArrowRight } from "lucide-react";
+import logoMesa from '../assets/logo-mesa.png';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -60,9 +61,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 border border-border">
           <div className="flex flex-col items-center mb-8">
-            <div className="w-14 h-14 sm:w-16 sm:h-16 bg-primary rounded-xl flex items-center justify-center mb-4">
-              <Building2 className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
-            </div>
+            <img src={logoMesa} alt="Logo Mesa" className="w-14 h-14 sm:w-16 sm:h-16 mb-4 rounded-2xl" />
             <h1 className="text-center mb-2">Sistema de Gestão de Desempenho</h1>
             <p className="text-muted-foreground text-center text-sm sm:text-base">
               Acesse com a sua conta da empresa

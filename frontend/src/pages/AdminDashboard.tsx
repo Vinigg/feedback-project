@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Settings, Users, FileQuestion, LogOut, BarChart3 } from "lucide-react";
+import logoMesa from '../assets/logo-mesa.png';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -34,20 +35,18 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-white border-b border-border sticky top-0 z-10">
+      <header className="bg-[#1a1a1a] border-b border-border sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-              <Settings className="w-5 h-5 text-white" />
-            </div>
+            <img src={logoMesa} alt="Logo Mesa" className="w-10 h-10 sm:w-10 sm:h-10 rounded-lg" />
             <div>
-              <h1 className="text-lg sm:text-xl">Painel do Administrador</h1>
-              <p className="text-xs sm:text-sm text-muted-foreground">Gerenciar configurações do sistema</p>
+              <h1 className="text-lg sm:text-xl text-white">Painel do Administrador</h1>
+              <p className="text-xs sm:text-sm text-white/60">Gerenciar configurações do sistema</p>
             </div>
           </div>
           <button
             onClick={() => navigate('/')}
-            className="flex items-center gap-2 px-3 sm:px-4 py-2 text-muted-foreground hover:text-foreground transition-colors text-sm sm:text-base"
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 text-white/60 hover:text-white transition-colors text-sm sm:text-base"
           >
             <LogOut className="w-4 h-4" />
             <span className="hidden sm:inline">Sair</span>

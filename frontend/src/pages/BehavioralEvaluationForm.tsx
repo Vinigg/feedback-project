@@ -47,17 +47,17 @@ export default function BehavioralEvaluationForm() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-white border-b border-border sticky top-0 z-10">
+      <header className="bg-[#1a1a1a] border-b border-border sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
           <button
             onClick={() => navigate('/behavioral-leader')}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-3 sm:mb-4 transition-colors text-sm sm:text-base"
+            className="flex items-center gap-2 text-white/60 hover:text-white mb-3 sm:mb-4 transition-colors text-sm sm:text-base"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Voltar ao Dashboard</span>
           </button>
-          <h1 className="text-xl sm:text-2xl">Avaliação Comportamental</h1>
-          <p className="text-muted-foreground mt-1 text-sm sm:text-base">
+          <h1 className="text-xl sm:text-2xl text-white">Avaliação Comportamental</h1>
+          <p className="text-white/60 mt-1 text-sm sm:text-base">
             Projeto #{projectId} - Colaborador #{employeeId}
           </p>
         </div>

@@ -68,15 +68,15 @@ export default function EmployeeDashboard() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-white border-b border-border sticky top-0 z-10">
+      <header className="bg-[#1a1a1a] border-b border-border sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
               <User className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-lg sm:text-xl">Dashboard Pessoal</h1>
-              <p className="text-xs sm:text-sm text-muted-foreground">João Silva - Frontend Developer</p>
+              <h1 className="text-lg sm:text-xl text-white">Dashboard Pessoal</h1>
+              <p className="text-xs sm:text-sm text-white/60">João Silva - Frontend Developer</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -88,7 +88,7 @@ export default function EmployeeDashboard() {
             </button>
             <button
               onClick={() => navigate('/')}
-              className="flex items-center gap-2 px-3 sm:px-4 py-2 text-muted-foreground hover:text-foreground transition-colors text-sm sm:text-base"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2  text-white/60 hover:text-white transition-colors text-sm sm:text-base"
             >
               <LogOut className="w-4 h-4" />
               <span className="hidden sm:inline">Sair</span>

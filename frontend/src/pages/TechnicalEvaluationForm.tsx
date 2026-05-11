@@ -47,17 +47,17 @@ export default function TechnicalEvaluationForm() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-white border-b border-border sticky top-0 z-10">
+      <header className="bg-[#1a1a1a] border-b border-border sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
           <button
             onClick={() => navigate('/technical-leader')}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-3 sm:mb-4 transition-colors text-sm sm:text-base"
+            className="flex items-center gap-2 text-white/60 hover:text-white mb-3 sm:mb-4 transition-colors text-sm sm:text-base"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Voltar ao Dashboard</span>
           </button>
-          <h1 className="text-xl sm:text-2xl">Avaliação Técnica</h1>
-          <p className="text-muted-foreground mt-1 text-sm sm:text-base">
+          <h1 className="text-xl sm:text-2xl text-white">Avaliação Técnica</h1>
+          <p className="text-white/60 mt-1 text-sm sm:text-base">
             Projeto #{projectId} - Colaborador #{employeeId}
           </p>
         </div>
@@ -70,7 +70,7 @@ export default function TechnicalEvaluationForm() {
           <div>
             <div className="flex items-center gap-2 mb-3">
               <Calendar className="w-5 h-5 text-primary" />
-              <h3 className="text-base sm:text-lg">Período de Avaliação</h3>
+              <h3 className="text-base sm:text-lg text-foreground">Período de Avaliação</h3>
             </div>
             <select
               value={selectedMonth}
@@ -88,10 +88,10 @@ export default function TechnicalEvaluationForm() {
 
           {/* Monthly Annotation Fields */}
           <div>
-            <h2 className="mb-6">Anotações Mensais - Desempenho Técnico</h2>
+            <h2 className="mb-6 text-foreground">Anotações Mensais - Desempenho Técnico</h2>
             <div className="space-y-6">
               <div>
-                <label className="block mb-2">
+                <label className="block mb-2 text-foreground">
                   Destaque Técnico
                   <span className="text-muted-foreground text-sm ml-2">(Principais conquistas do mês)</span>
                 </label>
@@ -104,7 +104,7 @@ export default function TechnicalEvaluationForm() {
               </div>
 
               <div>
-                <label className="block mb-2">
+                <label className="block mb-2 text-foreground">
                   Ponto de Atenção
                   <span className="text-muted-foreground text-sm ml-2">(Áreas que precisam de melhoria)</span>
                 </label>
