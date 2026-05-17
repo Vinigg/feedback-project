@@ -1,59 +1,77 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Building2, Lock, ArrowRight } from "lucide-react";
+import { Lock, ArrowRight } from "lucide-react";
 import logoMesa from '../assets/logo-mesa.png';
+import { isSupabaseConfigured, supabase } from '../lib/supabase';
+
+type ProfileRole = 'admin' | 'technical-leader' | 'behavioral-leader' | 'employee';
+
+type Profile = {
+  role: ProfileRole;
+  name: string;
+  email: string;
+};
+
+const roleRedirects: Record<ProfileRole, string> = {
+  admin: '/admin',
+  'technical-leader': '/technical-leader',
+  'behavioral-leader': '/behavioral-leader',
+  employee: '/employee',
+};
+
+const isProfileRole = (role: string): role is ProfileRole => {
+  return role in roleRedirects;
+};
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-
-  const detectUserRole = (email: string): 'admin' | 'technical-leader' | 'behavioral-leader' | 'employee' => {
-    // Simular detecção automática baseada no email/ID
-    const emailLower = email.toLowerCase();
-
-    // Padrões para Administrador
-    const adminPatterns = ['admin', 'adm', 'administrador', 'gestor.sistema'];
-
-    // Padrões para Líder Técnico
-    const technicalPatterns = ['tech', 'tecnico', 'carlos', 'miguel', 'arquiteto', 'senior'];
-
-    // Padrões para Líder Comportamental/RH
-    const behavioralPatterns = ['rh', 'hr', 'comportamental', 'ana', 'people', 'recursos'];
-
-    if (adminPatterns.some(pattern => emailLower.includes(pattern))) {
-      return 'admin';
-    } else if (technicalPatterns.some(pattern => emailLower.includes(pattern))) {
-      return 'technical-leader';
-    } else if (behavioralPatterns.some(pattern => emailLower.includes(pattern))) {
-      return 'behavioral-leader';
-    }
-
-    return 'employee';
-  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!email.trim()) return;
+    if (!email.trim() || !password) return;
 
     setIsLoading(true);
+    setError('');
 
-    // Simular autenticação e detecção automática
-    setTimeout(() => {
-      const role = detectUserRole(email);
-
-      if (role === 'admin') {
-        navigate('/admin');
-      } else if (role === 'technical-leader') {
-        navigate('/technical-leader');
-      } else if (role === 'behavioral-leader') {
-        navigate('/behavioral-leader');
-      } else {
-        navigate('/employee');
-      }
+    if (!isSupabaseConfigured || !supabase) {
+      setError('Supabase não configurado. Verifique o arquivo frontend/.env.');
       setIsLoading(false);
-    }, 1000);
+      return;
+    }
+
+    const { data, error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (signInError || !data.user) {
+      setError('Email ou senha inválidos. Confira os dados e tente novamente.');
+      setIsLoading(false);
+      return;
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role, name, email')
+      .eq('id', data.user.id)
+      .single<Profile>();
+
+    if (profileError || !profile || !isProfileRole(profile.role)) {
+      setError(`Login realizado, mas não foi possível carregar seu perfil.${profileError?.message ? ` ${profileError.message}` : ''}`);
+      setIsLoading(false);
+      return;
+    }
+
+    localStorage.setItem('token', data.session?.access_token ?? '');
+    localStorage.setItem('user', JSON.stringify(profile));
+
+    navigate(roleRedirects[profile.role]);
+    setIsLoading(false);
   };
 
   return (
@@ -87,9 +105,32 @@ export default function LoginPage() {
               </div>
             </div>
 
+            <div>
+              <label className="block text-sm mb-2 text-muted-foreground">
+                Senha
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Digite sua senha"
+                  className="w-full pl-11 pr-4 py-3 sm:py-3.5 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                  disabled={isLoading}
+                />
+              </div>
+            </div>
+
+            {error && (
+              <p className="text-sm text-destructive text-center">
+                {error}
+              </p>
+            )}
+
             <button
               type="submit"
-              disabled={isLoading || !email.trim()}
+              disabled={isLoading || !email.trim() || !password}
               className="w-full flex items-center justify-center gap-2 py-3 sm:py-3.5 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
@@ -113,14 +154,8 @@ export default function LoginPage() {
 
         <div className="mt-6 space-y-2">
           <p className="text-center text-muted-foreground text-xs sm:text-sm">
-            O sistema reconhece automaticamente o seu perfil
+            Use sua conta corporativa para acessar o sistema
           </p>
-          <div className="text-center text-muted-foreground text-xs space-y-1">
-            <p>Demo: 'admin@empresa.com' (Administrador)</p>
-            <p>'tech@empresa.com' (Líder Técnico)</p>
-            <p>'rh@empresa.com' (Líder Comportamental)</p>
-            <p>'joao@empresa.com' (Colaborador)</p>
-          </div>
         </div>
       </div>
     </div>

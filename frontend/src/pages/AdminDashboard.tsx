@@ -1,9 +1,15 @@
 import { useNavigate } from "react-router-dom";
-import { Settings, Users, FileQuestion, LogOut, BarChart3 } from "lucide-react";
+import { Users, FileQuestion, LogOut, BarChart3 } from "lucide-react";
 import logoMesa from '../assets/logo-mesa.png';
+import { supabase } from '../lib/supabase';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await supabase?.auth.signOut();
+    navigate('/');
+  };
 
   const adminCards = [
     {
@@ -45,7 +51,7 @@ export default function AdminDashboard() {
             </div>
           </div>
           <button
-            onClick={() => navigate('/')}
+            onClick={handleLogout}
             className="flex items-center gap-2 px-3 sm:px-4 py-2 text-white/60 hover:text-white transition-colors text-sm sm:text-base"
           >
             <LogOut className="w-4 h-4" />

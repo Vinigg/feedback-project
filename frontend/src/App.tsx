@@ -10,6 +10,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import RoleManagement from './pages/RoleManagement';
 import QuestionConfiguration from './pages/QuestionConfiguration';
 import Reports from './pages/Reports';
+import { PrivateRoute } from './routes/PrivateRoute';
 
 /**
  * Componente App
@@ -32,16 +33,16 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<LoginPage />} />
-        <Route path="/technical-leader" element={<TechnicalLeaderDashboard />} />
-        <Route path="/technical-leader/evaluate/:projectId/:employeeId" element={<TechnicalEvaluationForm />} />
-        <Route path="/behavioral-leader" element={<BehavioralLeaderDashboard />} />
-        <Route path="/behavioral-leader/evaluate/:projectId/:employeeId" element={<BehavioralEvaluationForm />} />
-        <Route path="/employee" element={<EmployeeDashboard />} />
-        <Route path="/employee/history" element={<EmployeeHistory />} />
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/admin/roles" element={<RoleManagement />} />
-        <Route path="/admin/questions" element={<QuestionConfiguration />} />
-        <Route path="/admin/reports" element={<Reports />} />
+        <Route path="/technical-leader" element={<PrivateRoute><TechnicalLeaderDashboard /></PrivateRoute>} />
+        <Route path="/technical-leader/evaluate/:projectId/:employeeId" element={<PrivateRoute><TechnicalEvaluationForm /></PrivateRoute>} />
+        <Route path="/behavioral-leader" element={<PrivateRoute><BehavioralLeaderDashboard /></PrivateRoute>} />
+        <Route path="/behavioral-leader/evaluate/:projectId/:employeeId" element={<PrivateRoute><BehavioralEvaluationForm /></PrivateRoute>} />
+        <Route path="/employee" element={<PrivateRoute><EmployeeDashboard /></PrivateRoute>} />
+        <Route path="/employee/history" element={<PrivateRoute><EmployeeHistory /></PrivateRoute>} />
+        <Route path="/admin" element={<PrivateRoute><AdminDashboard /></PrivateRoute>} />
+        <Route path="/admin/roles" element={<PrivateRoute><RoleManagement /></PrivateRoute>} />
+        <Route path="/admin/questions" element={<PrivateRoute><QuestionConfiguration /></PrivateRoute>} />
+        <Route path="/admin/reports" element={<PrivateRoute><Reports /></PrivateRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
