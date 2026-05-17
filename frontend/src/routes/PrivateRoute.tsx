@@ -1,47 +1,49 @@
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
-import type { UserRole } from '../types/auth.types';
+import type { Session } from '@supabase/supabase-js';
+import { isSupabaseConfigured, supabase } from '../lib/supabase';
 
 interface PrivateRouteProps {
   children: ReactNode;
-  allowedRoles?: UserRole[];
 }
 
-/**
- * Componente PrivateRoute
- *
- * Protege rotas que requerem autenticação e/ou tipo de usuário.
- * - Sem token: redireciona para /login
- * - Com token, sem role requerida: renderiza o filho
- * - Com token, role não permitida: redireciona para a rota padrão do usuário
- */
-export const PrivateRoute = ({ children, allowedRoles }: PrivateRouteProps) => {
-  const token = localStorage.getItem('token');
+export const PrivateRoute = ({ children }: PrivateRouteProps) => {
+  const [session, setSession] = useState<Session | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  if (!token) {
-    return <Navigate to="/login" replace />;
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadSession = async () => {
+      if (!isSupabaseConfigured || !supabase) {
+        if (isMounted) {
+          setSession(null);
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      const { data } = await supabase.auth.getSession();
+
+      if (isMounted) {
+        setSession(data.session);
+        setIsLoading(false);
+      }
+    };
+
+    loadSession();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  if (isLoading) {
+    return <div>Carregando...</div>;
   }
 
-  if (allowedRoles && allowedRoles.length > 0) {
-    const raw = localStorage.getItem('user');
-    const user = raw ? JSON.parse(raw) : null;
-    const role: UserRole | undefined = user?.role;
-
-    if (!role) {
-      return <Navigate to="/login" replace />;
-    }
-
-    if (!role || !allowedRoles.includes(role)) {
-      let fallback = '/login';
-      if (role === 'leader' || role === 'admin') {
-        fallback = '/dashboard';
-      } else if (role === 'rh') {
-        fallback = '/profile';
-      } else if (role === 'employee') {
-        fallback = '/feedbacks';
-      }
-      return <Navigate to={fallback} replace />;
-    }
+  if (!session) {
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;

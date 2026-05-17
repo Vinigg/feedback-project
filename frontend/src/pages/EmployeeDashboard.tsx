@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { User, TrendingUp, Award, AlertCircle, LogOut, History, Bell, ThumbsUp, AlertTriangle } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from "recharts";
+import { supabase } from '../lib/supabase';
 
 const performanceData = [
   { id: 'perf-1', month: 'Jan', score: 3.2 },
@@ -65,6 +66,11 @@ export default function EmployeeDashboard() {
   const averageScore = 3.7;
   const newNotifications = 2;
 
+  const handleLogout = async () => {
+    await supabase?.auth.signOut();
+    navigate('/');
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -87,7 +93,7 @@ export default function EmployeeDashboard() {
               )}
             </button>
             <button
-              onClick={() => navigate('/')}
+              onClick={handleLogout}
               className="flex items-center gap-2 px-3 sm:px-4 py-2  text-white/60 hover:text-white transition-colors text-sm sm:text-base"
             >
               <LogOut className="w-4 h-4" />
