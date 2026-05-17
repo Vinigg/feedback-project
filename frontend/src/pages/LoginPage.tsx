@@ -67,7 +67,6 @@ export default function LoginPage() {
       return;
     }
 
-    localStorage.setItem('token', data.session?.access_token ?? '');
     localStorage.setItem('user', JSON.stringify(profile));
 
     navigate(roleRedirects[profile.role]);
