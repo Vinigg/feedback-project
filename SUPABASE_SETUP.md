@@ -167,7 +167,25 @@ Essas roles controlam o redirecionamento após login:
 - `behavioral-leader` -> `/behavioral-leader`
 - `employee` -> `/employee`
 
-## 12. Testar login, logout e proteção de rotas
+## 12. Protecao por role no frontend
+
+O frontend usa `profiles.role` para duas decisoes:
+
+- Redirecionar o usuario depois do login.
+- Autorizar ou bloquear o acesso as rotas privadas.
+
+O Supabase Auth gerencia a sessao do usuario. O access token nao deve ser salvo manualmente em `localStorage`; a aplicacao deve usar a sessao mantida pelo Supabase.
+
+As permissoes de rota no frontend seguem esta regra:
+
+- `admin`: acessa as rotas de admin, como `/admin`, `/admin/roles`, `/admin/questions` e `/admin/reports`.
+- `technical-leader`: acessa as rotas tecnicas, como `/technical-leader` e `/technical-leader/evaluate/:projectId/:employeeId`.
+- `behavioral-leader`: acessa as rotas comportamentais, como `/behavioral-leader` e `/behavioral-leader/evaluate/:projectId/:employeeId`.
+- `employee`: acessa as rotas de colaborador, como `/employee` e `/employee/history`.
+
+A protecao no frontend melhora a experiencia e evita navegacao indevida, mas nao substitui seguranca no banco. Row Level Security (RLS) continua obrigatorio no Supabase para proteger dados, queries e operacoes diretamente na base.
+
+## 13. Testar login, logout e protecao de rotas
 
 1. Configure `frontend/.env`.
 2. Reinicie o servidor Vite.
