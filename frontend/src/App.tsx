@@ -1,15 +1,16 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import LoginPage from './pages/LoginPage';
+import TechnicalLeaderDashboard from './pages/TechnicalLeaderDashboard';
+import TechnicalEvaluationForm from './pages/TechnicalEvaluationForm';
+import BehavioralLeaderDashboard from './pages/BehavioralLeaderDashboard';
+import BehavioralEvaluationForm from './pages/BehavioralEvaluationForm';
+import EmployeeDashboard from './pages/EmployeeDashboard';
+import EmployeeHistory from './pages/EmployeeHistory';
+import AdminDashboard from './pages/AdminDashboard';
+import RoleManagement from './pages/RoleManagement';
+import QuestionConfiguration from './pages/QuestionConfiguration';
+import Reports from './pages/Reports';
 import { PrivateRoute } from './routes/PrivateRoute';
-
-// Páginas - Públicas
-import Login from './pages/Login';
-
-// Páginas - Protegidas
-import Dashboard from './pages/Dashboard';
-import Feedbacks from './pages/Feedbacks';
-import CreateFeedback from './pages/CreateFeedback';
-import FeedbackDetails from './pages/FeedbackDetails';
-import Profile from './pages/Profile';
 
 /**
  * Componente App
@@ -31,58 +32,18 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Rotas Públicas */}
-        <Route path="/login" element={<Login />} />
-
-        {/* Rotas exclusivas de Líder */}
-        <Route
-          path="/dashboard"
-          element={
-            <PrivateRoute allowedRoles={['admin', 'leader']}>
-              <Dashboard />
-            </PrivateRoute>
-          }
-        />
-
-        {/* Rotas compartilhadas (líder e liderado) */}
-        <Route
-          path="/feedbacks"
-          element={
-            <PrivateRoute allowedRoles={['employee']}>
-              <Feedbacks />
-            </PrivateRoute>
-          }
-        />
-
-        <Route
-          path="/feedbacks/create"
-          element={
-            <PrivateRoute allowedRoles={['employee']}>
-              <CreateFeedback />
-            </PrivateRoute>
-          }
-        />
-
-        <Route
-          path="/feedbacks/:id"
-          element={
-            <PrivateRoute allowedRoles={['employee']}>
-              <FeedbackDetails />
-            </PrivateRoute>
-          }
-        />
-
-        <Route
-          path="/profile"
-          element={
-            <PrivateRoute allowedRoles={['rh']}>
-              <Profile />
-            </PrivateRoute>
-          }
-        />
-
-        {/* Rota Padrão */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<LoginPage />} />
+        <Route path="/technical-leader" element={<PrivateRoute allowedRoles={['technical-leader', 'admin']}><TechnicalLeaderDashboard /></PrivateRoute>} />
+        <Route path="/technical-leader/evaluate/:projectId/:employeeId" element={<PrivateRoute allowedRoles={['technical-leader', 'admin']}><TechnicalEvaluationForm /></PrivateRoute>} />
+        <Route path="/behavioral-leader" element={<PrivateRoute allowedRoles={['behavioral-leader', 'admin']}><BehavioralLeaderDashboard /></PrivateRoute>} />
+        <Route path="/behavioral-leader/evaluate/:projectId/:employeeId" element={<PrivateRoute allowedRoles={['behavioral-leader', 'admin']}><BehavioralEvaluationForm /></PrivateRoute>} />
+        <Route path="/employee" element={<PrivateRoute allowedRoles={['employee', 'admin']}><EmployeeDashboard /></PrivateRoute>} />
+        <Route path="/employee/history" element={<PrivateRoute allowedRoles={['employee', 'admin']}><EmployeeHistory /></PrivateRoute>} />
+        <Route path="/admin" element={<PrivateRoute allowedRoles={['admin']}><AdminDashboard /></PrivateRoute>} />
+        <Route path="/admin/roles" element={<PrivateRoute allowedRoles={['admin']}><RoleManagement /></PrivateRoute>} />
+        <Route path="/admin/questions" element={<PrivateRoute allowedRoles={['admin']}><QuestionConfiguration /></PrivateRoute>} />
+        <Route path="/admin/reports" element={<PrivateRoute allowedRoles={['admin']}><Reports /></PrivateRoute>} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
   );

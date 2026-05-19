@@ -1,47 +1,101 @@
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
-import type { UserRole } from '../types/auth.types';
+import { isSupabaseConfigured, supabase } from '../lib/supabase';
+
+export type ProfileRole = 'admin' | 'technical-leader' | 'behavioral-leader' | 'employee';
 
 interface PrivateRouteProps {
   children: ReactNode;
-  allowedRoles?: UserRole[];
+  allowedRoles?: ProfileRole[];
 }
 
-/**
- * Componente PrivateRoute
- *
- * Protege rotas que requerem autenticação e/ou tipo de usuário.
- * - Sem token: redireciona para /login
- * - Com token, sem role requerida: renderiza o filho
- * - Com token, role não permitida: redireciona para a rota padrão do usuário
- */
-export const PrivateRoute = ({ children, allowedRoles }: PrivateRouteProps) => {
-  const token = localStorage.getItem('token');
+const roleRedirects: Record<ProfileRole, string> = {
+  admin: '/admin',
+  'technical-leader': '/technical-leader',
+  'behavioral-leader': '/behavioral-leader',
+  employee: '/employee',
+};
 
-  if (!token) {
-    return <Navigate to="/login" replace />;
+const isProfileRole = (role: string): role is ProfileRole => {
+  return role in roleRedirects;
+};
+
+export const PrivateRoute = ({ children, allowedRoles }: PrivateRouteProps) => {
+  const [redirectTo, setRedirectTo] = useState<string | null>(null);
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadSession = async () => {
+      if (!isSupabaseConfigured || !supabase) {
+        if (isMounted) {
+          setRedirectTo('/');
+          setIsAuthorized(false);
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      const { data } = await supabase.auth.getSession();
+
+      if (!isMounted) return;
+
+      if (!data.session) {
+        setRedirectTo('/');
+        setIsAuthorized(false);
+        setIsLoading(false);
+        return;
+      }
+
+      if (!allowedRoles?.length) {
+        setRedirectTo(null);
+        setIsAuthorized(true);
+        setIsLoading(false);
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', data.session.user.id)
+        .single<{ role: string }>();
+
+      if (!isMounted) return;
+
+      if (!profile || !isProfileRole(profile.role)) {
+        setRedirectTo('/');
+        setIsAuthorized(false);
+        setIsLoading(false);
+        return;
+      }
+
+      if (!allowedRoles.includes(profile.role)) {
+        setRedirectTo(roleRedirects[profile.role]);
+        setIsAuthorized(false);
+        setIsLoading(false);
+        return;
+      }
+
+      setRedirectTo(null);
+      setIsAuthorized(true);
+      setIsLoading(false);
+    };
+
+    loadSession();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [allowedRoles]);
+
+  if (isLoading) {
+    return <div>Carregando...</div>;
   }
 
-  if (allowedRoles && allowedRoles.length > 0) {
-    const raw = localStorage.getItem('user');
-    const user = raw ? JSON.parse(raw) : null;
-    const role: UserRole | undefined = user?.role;
-
-    if (!role) {
-      return <Navigate to="/login" replace />;
-    }
-
-    if (!role || !allowedRoles.includes(role)) {
-      let fallback = '/login';
-      if (role === 'leader' || role === 'admin') {
-        fallback = '/dashboard';
-      } else if (role === 'rh') {
-        fallback = '/profile';
-      } else if (role === 'employee') {
-        fallback = '/feedbacks';
-      }
-      return <Navigate to={fallback} replace />;
-    }
+  if (!isAuthorized) {
+    return <Navigate to={redirectTo ?? '/'} replace />;
   }
 
   return <>{children}</>;
