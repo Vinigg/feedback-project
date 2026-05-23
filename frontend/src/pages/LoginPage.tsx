@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Lock, ArrowRight } from "lucide-react";
 import logoMesa from '../assets/logo-mesa.png';
@@ -29,6 +29,24 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase) return;
+
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (!data.session) return;
+
+      const { data: profile } = await supabase!
+        .from('profiles')
+        .select('role')
+        .eq('id', data.session.user.id)
+        .single<{ role: ProfileRole }>();
+
+      if (profile && isProfileRole(profile.role)) {
+        navigate(roleRedirects[profile.role], { replace: true });
+      }
+    });
+  }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
