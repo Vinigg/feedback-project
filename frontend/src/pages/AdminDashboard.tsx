@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Users, FileQuestion, LogOut, BarChart3 } from "lucide-react";
+import { Users, FileQuestion, LogOut, BarChart3, UserCheck } from "lucide-react";
 import logoMesa from '../assets/logo-mesa.png';
 import { supabase } from '../lib/supabase';
 
@@ -35,6 +35,14 @@ export default function AdminDashboard() {
       icon: BarChart3,
       color: 'bg-emerald-500',
       path: '/admin/reports'
+    },
+    {
+      id: 'employees',
+      title: 'Colaboradores',
+      description: 'Visualizar perfis e histórico de desempenho dos colaboradores',
+      icon: UserCheck,
+      color: 'bg-cyan-500',
+      path: '/admin/employees'
     }
   ];
 
