@@ -1,75 +1,139 @@
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { User, TrendingUp, Award, AlertCircle, LogOut, History, Bell, ThumbsUp, AlertTriangle } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from "recharts";
 import { supabase } from '../lib/supabase';
+import { useCurrentUser } from '../hooks/useCurrentUser';
+import { getEvaluationsByEmployee, type Evaluation } from '../services/evaluations';
+import { getProjects, type Project } from '../services/projects';
+import { getAllProfiles, type Profile } from '../services/profiles';
 
-const performanceData = [
-  { id: 'perf-1', month: 'Jan', score: 3.2 },
-  { id: 'perf-2', month: 'Fev', score: 3.5 },
-  { id: 'perf-3', month: 'Mar', score: 3.8 },
-  { id: 'perf-4', month: 'Abr', score: 3.6 },
-];
+interface FeedbackDisplay {
+  id: string;
+  project: string;
+  date: string;
+  technicalLeader?: string;
+  behavioralLeader?: string;
+  technicalHighlight?: string;
+  behavioralHighlight?: string;
+  technicalStrengths?: string[];
+  technicalImprovements?: string[];
+  behavioralStrengths?: string[];
+  behavioralImprovements?: string[];
+}
+
+interface ProjectDisplay {
+  id: string;
+  name: string;
+  role: string;
+  status: string;
+}
 
 const skillsData = [
-  { id: 'skill-1', skill: 'Velocidade', value: 3.8 },
-  { id: 'skill-2', skill: 'Qualidade', value: 4.0 },
-  { id: 'skill-3', skill: 'Iniciativa', value: 3.5 },
-  { id: 'skill-4', skill: 'Comunicação', value: 3.9 },
-  { id: 'skill-5', skill: 'Proatividade', value: 3.6 },
+  { skill: 'Velocidade', value: 0 },
+  { skill: 'Qualidade', value: 0 },
+  { skill: 'Iniciativa', value: 0 },
+  { skill: 'Comunicação', value: 0 },
+  { skill: 'Proatividade', value: 0 },
 ];
 
-const recentFeedbacks = [
-  {
-    id: 1,
-    project: 'Plataforma Web',
-    date: '2026-04-01',
-    score: 3.8,
-    technicalLeader: 'Carlos Mendes',
-    behavioralLeader: 'Ana Silva (RH)',
-    technicalStrengths: ['Qualidade de Código', 'Resolução de Problemas'],
-    behavioralStrengths: ['Comunicação Clara', 'Trabalho em Equipe'],
-    technicalImprovements: ['Documentação Técnica'],
-    behavioralImprovements: ['Iniciativa'],
-    technicalHighlight: 'Excelente qualidade técnica no código',
-    behavioralHighlight: 'Ótima colaboração com a equipe'
-  },
-  {
-    id: 2,
-    project: 'App Mobile',
-    date: '2026-03-15',
-    score: 3.5,
-    technicalLeader: 'Miguel Santos',
-    technicalStrengths: ['Adaptabilidade', 'Qualidade de Código'],
-    technicalImprovements: ['Performance'],
-    technicalHighlight: 'Boa adaptação às tecnologias mobile'
-  },
-  {
-    id: 3,
-    project: 'API Gateway',
-    date: '2026-03-01',
-    score: 4.0,
-    behavioralLeader: 'Rita Sousa (RH)',
-    behavioralStrengths: ['Liderança', 'Autonomia', 'Resiliência'],
-    behavioralImprovements: [],
-    behavioralHighlight: 'Performance excepcional, referência para a equipe'
+const MONTH_LABELS: Record<string, string> = {
+  '01': 'Jan', '02': 'Fev', '03': 'Mar', '04': 'Abr',
+  '05': 'Mai', '06': 'Jun', '07': 'Jul', '08': 'Ago',
+  '09': 'Set', '10': 'Out', '11': 'Nov', '12': 'Dez',
+};
+
+function getLastNMonths(n: number): string[] {
+  const months: string[] = [];
+  const now = new Date();
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
   }
-];
-
-const projects = [
-  { id: 'proj-1', name: 'Plataforma Web', role: 'Frontend Developer', status: 'active' },
-  { id: 'proj-2', name: 'App Mobile', role: 'React Native', status: 'active' },
-  { id: 'proj-3', name: 'API Gateway', role: 'Contributor', status: 'completed' }
-];
+  return months;
+}
 
 export default function EmployeeDashboard() {
   const navigate = useNavigate();
-  const averageScore = 3.7;
-  const newNotifications = 2;
+  const { userId, profile, loading: userLoading } = useCurrentUser();
+
+  const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
+  const [feedbacks, setFeedbacks] = useState<FeedbackDisplay[]>([]);
+  const [projects, setProjects] = useState<ProjectDisplay[]>([]);
+  const [performanceData, setPerformanceData] = useState<{ month: string; score: number }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    Promise.all([
+      getEvaluationsByEmployee(userId),
+      getProjects(),
+      getAllProfiles(),
+    ])
+      .then(([evals, allProjects, allProfiles]) => {
+        setEvaluations(evals);
+
+        const projectsById = new Map<string, Project>(allProjects.map((p) => [p.id, p]));
+        const profilesById = new Map<string, Profile>(allProfiles.map((p) => [p.id, p]));
+
+        const displayed = evals.slice(0, 5).map((ev): FeedbackDisplay => {
+          const answers = (ev.answers as Record<string, string>) ?? {};
+          const projectName = ev.project_id
+            ? (projectsById.get(ev.project_id)?.name ?? 'Projeto desconhecido')
+            : 'Sem projeto';
+          const leaderName = ev.leader_id
+            ? (profilesById.get(ev.leader_id)?.name ?? 'Líder')
+            : undefined;
+          return {
+            id: ev.id,
+            project: projectName,
+            date: ev.created_at ?? ev.period,
+            technicalLeader: ev.evaluation_type === 'technical' ? leaderName : undefined,
+            behavioralLeader: ev.evaluation_type === 'behavioral' ? leaderName : undefined,
+            technicalHighlight: ev.evaluation_type === 'technical' ? answers.destaqueTecnico : undefined,
+            behavioralHighlight: ev.evaluation_type === 'behavioral' ? answers.destaqueComportamental : undefined,
+          };
+        });
+        setFeedbacks(displayed);
+
+        const seenProjectIds = new Set<string>();
+        const projectList: ProjectDisplay[] = [];
+        for (const ev of evals) {
+          if (ev.project_id && !seenProjectIds.has(ev.project_id)) {
+            seenProjectIds.add(ev.project_id);
+            const proj = projectsById.get(ev.project_id);
+            if (proj) {
+              projectList.push({ id: proj.id, name: proj.name, role: '', status: proj.status ?? 'active' });
+            }
+          }
+        }
+        setProjects(projectList);
+
+        const last4 = getLastNMonths(4);
+        const chartData = last4.map((ym) => {
+          const [, month] = ym.split('-');
+          return { month: MONTH_LABELS[month] ?? month, score: evals.filter((e) => e.period === ym).length };
+        });
+        setPerformanceData(chartData);
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [userId]);
 
   const handleLogout = async () => {
     await supabase?.auth.signOut();
     navigate('/');
   };
+
+  const newEvaluationsCount = evaluations.filter((e) => {
+    const created = new Date(e.created_at ?? '');
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    return created > weekAgo;
+  }).length;
+
+  const isReady = !userLoading && !loading;
 
   return (
     <div className="min-h-screen bg-background">
@@ -82,13 +146,15 @@ export default function EmployeeDashboard() {
             </div>
             <div>
               <h1 className="text-lg sm:text-xl text-white">Dashboard Pessoal</h1>
-              <p className="text-xs sm:text-sm text-white/60">João Silva - Frontend Developer</p>
+              <p className="text-xs sm:text-sm text-white/60">
+                {profile ? `${profile.name} - ${profile.role}` : 'Carregando...'}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <button className="relative p-2 hover:bg-muted rounded-lg transition-colors">
               <Bell className="w-5 h-5 text-muted-foreground" />
-              {newNotifications > 0 && (
+              {newEvaluationsCount > 0 && (
                 <span className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full" />
               )}
             </button>
@@ -105,7 +171,7 @@ export default function EmployeeDashboard() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* Notifications Banner */}
-        {newNotifications > 0 && (
+        {newEvaluationsCount > 0 && (
           <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mb-6 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
@@ -114,7 +180,7 @@ export default function EmployeeDashboard() {
               <div>
                 <p className="font-medium">Novas Avaliações Disponíveis</p>
                 <p className="text-sm text-muted-foreground">
-                  Você tem {newNotifications} nova(s) avaliação(ões) para visualizar
+                  Você tem {newEvaluationsCount} nova(s) avaliação(ões) para visualizar
                 </p>
               </div>
             </div>
@@ -131,20 +197,20 @@ export default function EmployeeDashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 sm:mb-8">
           <div className="bg-white rounded-xl p-6 border border-border">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-muted-foreground">Média Geral</p>
+              <p className="text-muted-foreground">Total de Avaliações</p>
               <TrendingUp className="w-5 h-5 text-emerald-600" />
             </div>
-            <p className="text-3xl mb-1">{averageScore.toFixed(1)}</p>
-            <p className="text-sm text-emerald-600">+0.3 vs mês anterior</p>
+            <p className="text-3xl mb-1">{isReady ? evaluations.length : '—'}</p>
+            <p className="text-sm text-muted-foreground">Todas as avaliações</p>
           </div>
 
           <div className="bg-white rounded-xl p-6 border border-border">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-muted-foreground">Avaliações</p>
+              <p className="text-muted-foreground">Avaliações Recentes</p>
               <Award className="w-5 h-5 text-primary" />
             </div>
-            <p className="text-3xl mb-1">{recentFeedbacks.length}</p>
-            <p className="text-sm text-muted-foreground">Últimos 3 meses</p>
+            <p className="text-3xl mb-1">{isReady ? feedbacks.length : '—'}</p>
+            <p className="text-sm text-muted-foreground">Últimas 5 avaliações</p>
           </div>
 
           <div className="bg-white rounded-xl p-6 border border-border">
@@ -152,31 +218,31 @@ export default function EmployeeDashboard() {
               <p className="text-muted-foreground">Projetos Ativos</p>
               <User className="w-5 h-5 text-amber-600" />
             </div>
-            <p className="text-3xl mb-1">{projects.filter(p => p.status === 'active').length}</p>
+            <p className="text-3xl mb-1">{isReady ? projects.filter(p => p.status === 'active').length : '—'}</p>
             <p className="text-sm text-muted-foreground">Em desenvolvimento</p>
           </div>
 
           <div className="bg-white rounded-xl p-6 border border-border">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-muted-foreground">Ponto Forte</p>
+              <p className="text-muted-foreground">Novas (7 dias)</p>
               <Award className="w-5 h-5 text-purple-600" />
             </div>
-            <p className="text-lg mb-1">Qualidade</p>
-            <p className="text-sm text-muted-foreground">Score: 4.0</p>
+            <p className="text-3xl mb-1">{isReady ? newEvaluationsCount : '—'}</p>
+            <p className="text-sm text-muted-foreground">Avaliações recentes</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
           {/* Performance Trend */}
           <div className="bg-white rounded-xl p-4 sm:p-6 border border-border">
-            <h3 className="mb-4 text-base sm:text-lg">Evolução de Desempenho</h3>
+            <h3 className="mb-4 text-base sm:text-lg">Avaliações por Mês</h3>
             <ResponsiveContainer width="100%" height={240}>
               <LineChart data={performanceData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="month" stroke="#888" />
-                <YAxis domain={[0, 4]} stroke="#888" />
+                <YAxis allowDecimals={false} stroke="#888" />
                 <Tooltip />
-                <Line type="monotone" dataKey="score" stroke="#030213" strokeWidth={2} dot={{ fill: '#030213', r: 4 }} />
+                <Line type="monotone" dataKey="score" name="Avaliações" stroke="#030213" strokeWidth={2} dot={{ fill: '#030213', r: 4 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -201,6 +267,12 @@ export default function EmployeeDashboard() {
             <h3 className="text-base sm:text-lg">Meus Projetos</h3>
           </div>
           <div className="divide-y divide-border">
+            {!isReady && (
+              <div className="px-4 sm:px-6 py-6 text-center text-muted-foreground text-sm">Carregando...</div>
+            )}
+            {isReady && projects.length === 0 && (
+              <div className="px-4 sm:px-6 py-6 text-center text-muted-foreground text-sm">Nenhum projeto encontrado</div>
+            )}
             {projects.map((project) => (
               <div key={project.id} className="px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 hover:bg-muted/30 transition-colors">
                 <div>
@@ -233,11 +305,17 @@ export default function EmployeeDashboard() {
           </div>
 
           <div className="p-4 sm:p-6">
+            {!isReady && (
+              <p className="text-center text-muted-foreground text-sm py-8">Carregando avaliações...</p>
+            )}
+            {isReady && feedbacks.length === 0 && (
+              <p className="text-center text-muted-foreground text-sm py-8">Nenhuma avaliação encontrada</p>
+            )}
             <div className="space-y-4 sm:space-y-6">
-              {recentFeedbacks.map((feedback, idx) => (
+              {feedbacks.map((feedback, idx) => (
                 <div key={feedback.id} className="relative pl-6 sm:pl-8">
                   {/* Timeline Line */}
-                  {idx !== recentFeedbacks.length - 1 && (
+                  {idx !== feedbacks.length - 1 && (
                     <div className="absolute left-1.5 sm:left-2 top-6 sm:top-8 bottom-0 w-0.5 bg-border" />
                   )}
 
@@ -258,12 +336,8 @@ export default function EmployeeDashboard() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="flex items-center gap-1 mb-1">
-                          <Award className="w-4 h-4 text-amber-500" />
-                          <span className="font-medium">{feedback.score.toFixed(1)}</span>
-                        </div>
                         <p className="text-xs text-muted-foreground">
-                          {new Date(feedback.date).toLocaleDateString('pt-PT')}
+                          {feedback.date ? new Date(feedback.date).toLocaleDateString('pt-PT') : ''}
                         </p>
                       </div>
                     </div>

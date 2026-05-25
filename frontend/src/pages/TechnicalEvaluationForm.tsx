@@ -1,6 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Upload, Save, CheckCircle, Calendar } from "lucide-react";
+import { useCurrentUser } from '../hooks/useCurrentUser';
+import { createEvaluation } from '../services/evaluations';
+import { getProjects } from '../services/projects';
+import { getAllProfiles } from '../services/profiles';
 
 interface MonthlyAnnotation {
   destaqueTecnico: string;
@@ -13,7 +17,10 @@ interface MonthlyAnnotation {
 export default function TechnicalEvaluationForm() {
   const navigate = useNavigate();
   const { projectId, employeeId } = useParams();
+  const { userId } = useCurrentUser();
 
+  const [projectName, setProjectName] = useState<string>('');
+  const [employeeName, setEmployeeName] = useState<string>('');
   const [annotation, setAnnotation] = useState<MonthlyAnnotation>({
     destaqueTecnico: '',
     pontoAtencao: '',
@@ -21,11 +28,23 @@ export default function TechnicalEvaluationForm() {
     aprendizado: '',
     mentoria: ''
   });
-
-  const [selectedMonth, setSelectedMonth] = useState('2026-04');
+  const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7));
   const [files, setFiles] = useState<File[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!projectId || !employeeId) return;
+    Promise.all([getProjects(), getAllProfiles()])
+      .then(([projects, profiles]) => {
+        const proj = projects.find((p) => p.id === projectId);
+        if (proj) setProjectName(proj.name);
+        const emp = profiles.find((p) => p.id === employeeId);
+        if (emp) setEmployeeName(emp.name);
+      })
+      .catch(console.error);
+  }, [projectId, employeeId]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -33,15 +52,26 @@ export default function TechnicalEvaluationForm() {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (!userId || !employeeId) return;
     setIsSaving(true);
-    setTimeout(() => {
-      setIsSaving(false);
+    setError(null);
+    try {
+      await createEvaluation({
+        evaluation_type: 'technical',
+        employee_id: employeeId,
+        leader_id: userId,
+        project_id: projectId,
+        period: selectedMonth,
+        answers: annotation as unknown as Record<string, unknown>,
+      });
       setSaved(true);
-      setTimeout(() => {
-        navigate('/technical-leader');
-      }, 1500);
-    }, 1000);
+      setTimeout(() => navigate('/technical-leader'), 1500);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao salvar avaliação');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -58,7 +88,7 @@ export default function TechnicalEvaluationForm() {
           </button>
           <h1 className="text-xl sm:text-2xl text-white">Avaliação Técnica</h1>
           <p className="text-white/60 mt-1 text-sm sm:text-base">
-            Projeto #{projectId} - Colaborador #{employeeId}
+            {projectName || `Projeto #${projectId}`} — {employeeName || `Colaborador #${employeeId}`}
           </p>
         </div>
       </header>
@@ -77,10 +107,13 @@ export default function TechnicalEvaluationForm() {
               onChange={(e) => setSelectedMonth(e.target.value)}
               className="w-full sm:w-auto px-4 py-2.5 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm sm:text-base"
             >
-              <option value="2026-04">Abril 2026</option>
-              <option value="2026-03">Março 2026</option>
-              <option value="2026-02">Fevereiro 2026</option>
-              <option value="2026-01">Janeiro 2026</option>
+              {Array.from({ length: 6 }, (_, i) => {
+                const d = new Date();
+                d.setMonth(d.getMonth() - i);
+                const value = d.toISOString().slice(0, 7);
+                const label = d.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
+                return <option key={value} value={value}>{label}</option>;
+              })}
             </select>
           </div>
 
@@ -197,6 +230,9 @@ export default function TechnicalEvaluationForm() {
           </div>
 
           {/* Actions */}
+          {error && (
+            <p className="text-sm text-destructive">{error}</p>
+          )}
           <div className="flex flex-col sm:flex-row gap-3 pt-4">
             <button
               onClick={() => navigate('/technical-leader')}

@@ -1,37 +1,78 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Plus, Edit, Trash2, Search } from "lucide-react";
+import { getRoles, createRole, updateRole, deleteRole, type Role } from '../services/roles';
 
-interface Role {
-  id: string;
+interface RoleFormData {
   name: string;
   description: string;
   department: string;
-  activeEmployees: number;
 }
-
-const mockRoles: Role[] = [
-  { id: 'role-1', name: 'Desenvolvedor Frontend', description: 'Desenvolvimento de interfaces web', department: 'Tecnologia', activeEmployees: 23 },
-  { id: 'role-2', name: 'Desenvolvedor Backend', description: 'Desenvolvimento de APIs e serviços', department: 'Tecnologia', activeEmployees: 18 },
-  { id: 'role-3', name: 'Designer UI/UX', description: 'Design de experiência do usuário', department: 'Design', activeEmployees: 12 },
-  { id: 'role-4', name: 'Analista de QA', description: 'Garantia de qualidade de software', department: 'Tecnologia', activeEmployees: 8 },
-  { id: 'role-5', name: 'DevOps Engineer', description: 'Infraestrutura e automação', department: 'Tecnologia', activeEmployees: 6 },
-];
 
 export default function RoleManagement() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [roles, setRoles] = useState<Role[]>(mockRoles);
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editingRole, setEditingRole] = useState<Role | null>(null);
+  const [formData, setFormData] = useState<RoleFormData>({ name: '', description: '', department: '' });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    getRoles()
+      .then(setRoles)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
 
   const filteredRoles = roles.filter(role =>
     role.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    role.department.toLowerCase().includes(searchTerm.toLowerCase())
+    (role.department ?? '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleDelete = (roleId: string) => {
-    if (window.confirm('Tem certeza que deseja excluir este cargo?')) {
+  const handleDelete = async (roleId: string) => {
+    if (!window.confirm('Tem certeza que deseja excluir este cargo?')) return;
+    try {
+      await deleteRole(roleId);
       setRoles(roles.filter(r => r.id !== roleId));
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao excluir cargo');
+    }
+  };
+
+  const openAddModal = () => {
+    setEditingRole(null);
+    setFormData({ name: '', description: '', department: '' });
+    setShowAddModal(true);
+  };
+
+  const handleEdit = (role: Role) => {
+    setEditingRole(role);
+    setFormData({ name: role.name, description: role.description ?? '', department: role.department ?? '' });
+    setShowAddModal(true);
+  };
+
+  const handleSave = async () => {
+    if (!formData.name) return;
+    setSaving(true);
+    try {
+      if (editingRole) {
+        const updated = await updateRole(editingRole.id, formData);
+        setRoles(roles.map(r => r.id === editingRole.id ? updated : r));
+      } else {
+        const created = await createRole(formData);
+        setRoles([...roles, created]);
+      }
+      setShowAddModal(false);
+      setEditingRole(null);
+      setFormData({ name: '', description: '', department: '' });
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao salvar cargo');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -69,7 +110,7 @@ export default function RoleManagement() {
               />
             </div>
             <button
-              onClick={() => setShowAddModal(true)}
+              onClick={openAddModal}
               className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
             >
               <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -80,6 +121,11 @@ export default function RoleManagement() {
 
         {/* Roles List */}
         <div className="space-y-4">
+          {loading && (
+            <div className="bg-white rounded-xl border border-border p-12 text-center">
+              <p className="text-muted-foreground">Carregando cargos...</p>
+            </div>
+          )}
           {filteredRoles.map((role) => (
             <div key={role.id} className="bg-white rounded-xl border border-border p-4 sm:p-6 hover:shadow-md transition-shadow">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -87,17 +133,16 @@ export default function RoleManagement() {
                   <h3 className="text-base sm:text-lg font-medium mb-1">{role.name}</h3>
                   <p className="text-xs sm:text-sm text-muted-foreground mb-2">{role.description}</p>
                   <div className="flex flex-wrap gap-3 text-xs sm:text-sm">
-                    <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full border border-blue-200">
-                      {role.department}
-                    </span>
-                    <span className="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200">
-                      {role.activeEmployees} colaboradores
-                    </span>
+                    {role.department && (
+                      <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full border border-blue-200">
+                        {role.department}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="flex gap-2 w-full sm:w-auto">
                   <button
-                    onClick={() => {/* Edit functionality */}}
+                    onClick={() => handleEdit(role)}
                     className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors"
                   >
                     <Edit className="w-4 h-4" />
@@ -115,7 +160,7 @@ export default function RoleManagement() {
             </div>
           ))}
 
-          {filteredRoles.length === 0 && (
+          {!loading && filteredRoles.length === 0 && (
             <div className="bg-white rounded-xl border border-border p-12 text-center">
               <p className="text-muted-foreground">Nenhum cargo encontrado</p>
             </div>
@@ -123,36 +168,52 @@ export default function RoleManagement() {
         </div>
       </div>
 
-      {/* Add Modal (simplified for now) */}
+      {/* Add/Edit Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl p-6 max-w-md w-full">
-            <h3 className="text-lg font-medium mb-4">Novo Cargo</h3>
+            <h3 className="text-lg font-medium mb-4">{editingRole ? 'Editar Cargo' : 'Novo Cargo'}</h3>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm mb-2">Nome do Cargo</label>
-                <input type="text" className="w-full px-4 py-2 bg-input-background rounded-lg border border-border" />
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full px-4 py-2 bg-input-background rounded-lg border border-border"
+                />
               </div>
               <div>
                 <label className="block text-sm mb-2">Descrição</label>
-                <textarea className="w-full px-4 py-2 bg-input-background rounded-lg border border-border" rows={3} />
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  className="w-full px-4 py-2 bg-input-background rounded-lg border border-border"
+                  rows={3}
+                />
               </div>
               <div>
                 <label className="block text-sm mb-2">Departamento</label>
-                <input type="text" className="w-full px-4 py-2 bg-input-background rounded-lg border border-border" />
+                <input
+                  type="text"
+                  value={formData.department}
+                  onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                  className="w-full px-4 py-2 bg-input-background rounded-lg border border-border"
+                />
               </div>
               <div className="flex gap-3 pt-4">
                 <button
-                  onClick={() => setShowAddModal(false)}
+                  onClick={() => { setShowAddModal(false); setEditingRole(null); }}
                   className="flex-1 px-4 py-2 bg-secondary text-secondary-foreground rounded-lg"
                 >
                   Cancelar
                 </button>
                 <button
-                  onClick={() => setShowAddModal(false)}
-                  className="flex-1 px-4 py-2 bg-primary text-white rounded-lg"
+                  onClick={handleSave}
+                  disabled={saving || !formData.name}
+                  className="flex-1 px-4 py-2 bg-primary text-white rounded-lg disabled:opacity-50"
                 >
-                  Salvar
+                  {saving ? 'Salvando...' : editingRole ? 'Atualizar' : 'Salvar'}
                 </button>
               </div>
             </div>

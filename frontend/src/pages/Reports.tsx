@@ -1,33 +1,44 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, TrendingUp, Users, Award, Calendar } from "lucide-react";
+import { getSummary, getTopPerformers, getDepartmentStats, type SummaryReport, type TopPerformer, type DepartmentStats } from '../services/reports';
+
+function getPeriodOptions() {
+  const options = [];
+  const now = new Date();
+  for (let i = 0; i < 4; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const value = d.toISOString().slice(0, 7);
+    const label = d.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
+    options.push({ value, label });
+  }
+  return options;
+}
 
 export default function Reports() {
   const navigate = useNavigate();
-  const [selectedPeriod, setSelectedPeriod] = useState('semester-1-2026');
+  const periodOptions = getPeriodOptions();
+  const [selectedPeriod, setSelectedPeriod] = useState(periodOptions[0].value);
+  const [summary, setSummary] = useState<SummaryReport | null>(null);
+  const [topPerformers, setTopPerformers] = useState<TopPerformer[]>([]);
+  const [departmentStats, setDepartmentStats] = useState<DepartmentStats[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const summaryStats = [
-    { label: 'Total de Colaboradores Avaliados', value: '156', icon: Users, color: 'bg-blue-500' },
-    { label: 'Média Técnica Geral', value: '3.2/4', icon: TrendingUp, color: 'bg-emerald-500' },
-    { label: 'Média Comportamental Geral', value: '3.4/4', icon: Award, color: 'bg-purple-500' },
-    { label: 'Taxa de Conclusão', value: '94%', icon: Calendar, color: 'bg-amber-500' },
-  ];
-
-  const topPerformers = [
-    { name: 'Maria Santos', role: 'Backend Developer', technical: 4.0, behavioral: 3.8, overall: 3.9 },
-    { name: 'João Silva', role: 'Frontend Developer', technical: 3.9, behavioral: 3.7, overall: 3.8 },
-    { name: 'Ana Rodrigues', role: 'QA Engineer', technical: 3.7, behavioral: 4.0, overall: 3.85 },
-    { name: 'Carlos Ferreira', role: 'DevOps', technical: 3.8, behavioral: 3.6, overall: 3.7 },
-    { name: 'Sofia Almeida', role: 'iOS Developer', technical: 3.6, behavioral: 3.8, overall: 3.7 },
-  ];
-
-  const departmentStats = [
-    { department: 'Tecnologia', employees: 67, avgTech: 3.3, avgBehavioral: 3.2, overall: 3.25 },
-    { department: 'Design', employees: 23, avgTech: 3.1, avgBehavioral: 3.6, overall: 3.35 },
-    { department: 'Produto', employees: 18, avgTech: 3.0, avgBehavioral: 3.5, overall: 3.25 },
-    { department: 'QA', employees: 15, avgTech: 3.2, avgBehavioral: 3.4, overall: 3.3 },
-    { department: 'DevOps', employees: 12, avgTech: 3.4, avgBehavioral: 3.1, overall: 3.25 },
-  ];
+  useEffect(() => {
+    setLoading(true);
+    Promise.all([
+      getSummary(selectedPeriod),
+      getTopPerformers(selectedPeriod),
+      getDepartmentStats(selectedPeriod),
+    ])
+      .then(([s, top, dept]) => {
+        setSummary(s);
+        setTopPerformers(top);
+        setDepartmentStats(dept);
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [selectedPeriod]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -57,28 +68,56 @@ export default function Reports() {
             onChange={(e) => setSelectedPeriod(e.target.value)}
             className="w-full sm:w-auto px-4 py-2.5 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm sm:text-base"
           >
-            <option value="semester-1-2026">1º Semestre 2026</option>
-            <option value="semester-2-2025">2º Semestre 2025</option>
-            <option value="semester-1-2025">1º Semestre 2025</option>
+            {periodOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
           </select>
         </div>
 
         {/* Summary Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 sm:mb-8">
-          {summaryStats.map((stat) => {
-            const Icon = stat.icon;
-            return (
-              <div key={stat.label} className="bg-white rounded-xl p-4 sm:p-6 border border-border">
-                <div className="flex items-center justify-between mb-3">
-                  <div className={`w-10 h-10 sm:w-12 sm:h-12 ${stat.color} rounded-lg flex items-center justify-center`}>
-                    <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                  </div>
-                </div>
-                <p className="text-2xl sm:text-3xl mb-1">{stat.value}</p>
-                <p className="text-xs sm:text-sm text-muted-foreground">{stat.label}</p>
+          <div className="bg-white rounded-xl p-4 sm:p-6 border border-border">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-500 rounded-lg flex items-center justify-center">
+                <Users className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
-            );
-          })}
+            </div>
+            <p className="text-2xl sm:text-3xl mb-1">{loading ? '—' : summary?.evaluated_employees ?? 0}</p>
+            <p className="text-xs sm:text-sm text-muted-foreground">Total de Colaboradores Avaliados</p>
+          </div>
+          <div className="bg-white rounded-xl p-4 sm:p-6 border border-border">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-500 rounded-lg flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+              </div>
+            </div>
+            <p className="text-2xl sm:text-3xl mb-1">
+              {loading ? '—' : summary ? `${summary.average_technical}/4` : '0/4'}
+            </p>
+            <p className="text-xs sm:text-sm text-muted-foreground">Média Técnica Geral</p>
+          </div>
+          <div className="bg-white rounded-xl p-4 sm:p-6 border border-border">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-500 rounded-lg flex items-center justify-center">
+                <Award className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+              </div>
+            </div>
+            <p className="text-2xl sm:text-3xl mb-1">
+              {loading ? '—' : summary ? `${summary.average_behavioral}/4` : '0/4'}
+            </p>
+            <p className="text-xs sm:text-sm text-muted-foreground">Média Comportamental Geral</p>
+          </div>
+          <div className="bg-white rounded-xl p-4 sm:p-6 border border-border">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-amber-500 rounded-lg flex items-center justify-center">
+                <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+              </div>
+            </div>
+            <p className="text-2xl sm:text-3xl mb-1">
+              {loading ? '—' : summary ? `${summary.completion_rate}%` : '0%'}
+            </p>
+            <p className="text-xs sm:text-sm text-muted-foreground">Taxa de Conclusão</p>
+          </div>
         </div>
 
         {/* Top Performers */}
@@ -101,6 +140,9 @@ export default function Reports() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
+                {topPerformers.length === 0 && !loading && (
+                  <tr><td colSpan={5} className="px-6 py-8 text-center text-muted-foreground text-sm">Sem dados para este período</td></tr>
+                )}
                 {topPerformers.map((performer, idx) => (
                   <tr key={idx} className="hover:bg-muted/20 transition-colors">
                     <td className="px-4 sm:px-6 py-3 sm:py-4">
@@ -151,6 +193,9 @@ export default function Reports() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
+                {departmentStats.length === 0 && !loading && (
+                  <tr><td colSpan={5} className="px-6 py-8 text-center text-muted-foreground text-sm">Sem dados para este período</td></tr>
+                )}
                 {departmentStats.map((dept, idx) => (
                   <tr key={idx} className="hover:bg-muted/20 transition-colors">
                     <td className="px-4 sm:px-6 py-3 sm:py-4">
@@ -160,10 +205,10 @@ export default function Reports() {
                       <p className="text-xs sm:text-sm text-muted-foreground">{dept.employees}</p>
                     </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 text-center">
-                      <span className="text-xs sm:text-sm">{dept.avgTech}</span>
+                      <span className="text-xs sm:text-sm">{dept.avg_technical}</span>
                     </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 text-center">
-                      <span className="text-xs sm:text-sm">{dept.avgBehavioral}</span>
+                      <span className="text-xs sm:text-sm">{dept.avg_behavioral}</span>
                     </td>
                     <td className="px-4 sm:px-6 py-3 sm:py-4 text-center">
                       <span className="font-medium text-xs sm:text-sm">{dept.overall}</span>

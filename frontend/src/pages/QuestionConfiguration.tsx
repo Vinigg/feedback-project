@@ -1,51 +1,34 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Plus, Edit, Trash2, Search, Code, Heart } from "lucide-react";
-
-interface Question {
-  id: string;
-  text: string;
-  type: 'technical' | 'behavioral';
-  role?: string;
-  category: string;
-}
-
-const mockQuestions: Question[] = [
-  { id: 'q-tech-1', text: 'Como foi a qualidade do código entregue neste mês?', type: 'technical', role: 'Desenvolvedor Frontend', category: 'Qualidade' },
-  { id: 'q-tech-2', text: 'O colaborador demonstrou evolução técnica? Quais tecnologias/práticas foram aprendidas?', type: 'technical', role: 'Desenvolvedor Backend', category: 'Aprendizado' },
-  { id: 'q-tech-3', text: 'Houve mentoria técnica ou apoio a outros desenvolvedores?', type: 'technical', category: 'Mentoria' },
-  { id: 'q-tech-4', text: 'Qual foi o nível de entrega comparado ao esperado?', type: 'technical', category: 'Desempenho' },
-  { id: 'q-beh-1', text: 'Como foi a comunicação do colaborador com a equipe?', type: 'behavioral', category: 'Comunicação' },
-  { id: 'q-beh-2', text: 'O colaborador antecipou riscos ou problemas no projeto?', type: 'behavioral', category: 'Proatividade' },
-  { id: 'q-beh-3', text: 'Como foi o apoio aos colegas de equipe?', type: 'behavioral', category: 'Colaboração' },
-  { id: 'q-beh-4', text: 'Houve iniciativas voluntárias ou contribuições além do esperado?', type: 'behavioral', category: 'Iniciativa' },
-];
+import { getQuestions, createQuestion, updateQuestion, deleteQuestion, type Question } from '../services/questions';
+import { getRoles } from '../services/roles';
 
 const technicalCategories = ['Qualidade', 'Desempenho', 'Aprendizado', 'Mentoria', 'Arquitetura'];
 const behavioralCategories = ['Comunicação', 'Proatividade', 'Colaboração', 'Iniciativa', 'Liderança'];
-
-const mockRoles = [
-  'Desenvolvedor Frontend',
-  'Desenvolvedor Backend',
-  'Designer UI/UX',
-  'Analista de QA',
-  'DevOps Engineer',
-  'Product Manager'
-];
 
 export default function QuestionConfiguration() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'technical' | 'behavioral'>('technical');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [questions, setQuestions] = useState<Question[]>(mockQuestions);
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [roleNames, setRoleNames] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
 
-  const [formData, setFormData] = useState({
-    text: '',
-    role: '',
-    category: ''
-  });
+  const [formData, setFormData] = useState({ text: '', role: '', category: '' });
+
+  useEffect(() => {
+    Promise.all([getQuestions(), getRoles()])
+      .then(([qs, roles]) => {
+        setQuestions(qs);
+        setRoleNames(roles.map((r) => r.name));
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
 
   const filteredQuestions = questions.filter(q =>
     q.type === activeTab &&
@@ -54,45 +37,52 @@ export default function QuestionConfiguration() {
      q.role?.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const handleDelete = (questionId: string) => {
-    if (window.confirm('Tem certeza que deseja excluir esta pergunta?')) {
+  const handleDelete = async (questionId: string) => {
+    if (!window.confirm('Tem certeza que deseja excluir esta pergunta?')) return;
+    try {
+      await deleteQuestion(questionId);
       setQuestions(questions.filter(q => q.id !== questionId));
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao excluir pergunta');
     }
   };
 
   const handleEdit = (question: Question) => {
     setEditingQuestion(question);
-    setFormData({
-      text: question.text,
-      role: question.role || '',
-      category: question.category
-    });
+    setFormData({ text: question.text, role: question.role || '', category: question.category });
     setShowAddModal(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.text || !formData.category) return;
-
-    if (editingQuestion) {
-      setQuestions(questions.map(q =>
-        q.id === editingQuestion.id
-          ? { ...q, text: formData.text, role: formData.role || undefined, category: formData.category }
-          : q
-      ));
-    } else {
-      const newQuestion: Question = {
-        id: `q-${activeTab}-${Date.now()}`,
-        text: formData.text,
-        type: activeTab,
-        role: formData.role || undefined,
-        category: formData.category
-      };
-      setQuestions([...questions, newQuestion]);
+    setSaving(true);
+    try {
+      if (editingQuestion) {
+        const updated = await updateQuestion(editingQuestion.id, {
+          text: formData.text,
+          role: formData.role || undefined,
+          category: formData.category,
+        });
+        setQuestions(questions.map(q => q.id === editingQuestion.id ? updated : q));
+      } else {
+        const created = await createQuestion({
+          text: formData.text,
+          type: activeTab,
+          role: formData.role || undefined,
+          category: formData.category,
+        });
+        setQuestions([...questions, created]);
+      }
+      setShowAddModal(false);
+      setEditingQuestion(null);
+      setFormData({ text: '', role: '', category: '' });
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao salvar pergunta');
+    } finally {
+      setSaving(false);
     }
-
-    setShowAddModal(false);
-    setEditingQuestion(null);
-    setFormData({ text: '', role: '', category: '' });
   };
 
   const openAddModal = () => {
@@ -233,7 +223,12 @@ export default function QuestionConfiguration() {
             </div>
           ))}
 
-          {filteredQuestions.length === 0 && (
+          {loading && (
+            <div className="bg-white rounded-xl border border-border p-12 text-center">
+              <p className="text-muted-foreground">Carregando perguntas...</p>
+            </div>
+          )}
+          {!loading && filteredQuestions.length === 0 && (
             <div className="bg-white rounded-xl border border-border p-12 text-center">
               <p className="text-muted-foreground">Nenhuma pergunta encontrada</p>
             </div>
@@ -282,7 +277,7 @@ export default function QuestionConfiguration() {
                   className="w-full px-4 py-2 bg-input-background rounded-lg border border-border text-sm"
                 >
                   <option value="">Todos os cargos</option>
-                  {mockRoles.map(role => (
+                  {roleNames.map(role => (
                     <option key={role} value={role}>{role}</option>
                   ))}
                 </select>
@@ -303,12 +298,12 @@ export default function QuestionConfiguration() {
                 </button>
                 <button
                   onClick={handleSave}
-                  disabled={!formData.text || !formData.category}
+                  disabled={saving || !formData.text || !formData.category}
                   className={`flex-1 px-4 py-2 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed ${
                     activeTab === 'technical' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-purple-600 hover:bg-purple-700'
                   }`}
                 >
-                  {editingQuestion ? 'Atualizar' : 'Salvar'}
+                  {saving ? 'Salvando...' : editingQuestion ? 'Atualizar' : 'Salvar'}
                 </button>
               </div>
             </div>
