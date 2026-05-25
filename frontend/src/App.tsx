@@ -10,6 +10,8 @@ import AdminDashboard from './pages/AdminDashboard';
 import RoleManagement from './pages/RoleManagement';
 import QuestionConfiguration from './pages/QuestionConfiguration';
 import Reports from './pages/Reports';
+import AdminEmployeeList from './pages/AdminEmployeeList';
+import AdminEmployeeProfile from './pages/AdminEmployeeProfile';
 import { PrivateRoute } from './routes/PrivateRoute';
 
 /**
@@ -37,12 +39,14 @@ function App() {
         <Route path="/technical-leader/evaluate/:projectId/:employeeId" element={<PrivateRoute allowedRoles={['technical-leader', 'admin']}><TechnicalEvaluationForm /></PrivateRoute>} />
         <Route path="/behavioral-leader" element={<PrivateRoute allowedRoles={['behavioral-leader', 'admin']}><BehavioralLeaderDashboard /></PrivateRoute>} />
         <Route path="/behavioral-leader/evaluate/:projectId/:employeeId" element={<PrivateRoute allowedRoles={['behavioral-leader', 'admin']}><BehavioralEvaluationForm /></PrivateRoute>} />
-        <Route path="/employee" element={<PrivateRoute allowedRoles={['employee', 'admin']}><EmployeeDashboard /></PrivateRoute>} />
-        <Route path="/employee/history" element={<PrivateRoute allowedRoles={['employee', 'admin']}><EmployeeHistory /></PrivateRoute>} />
+        <Route path="/employee" element={<PrivateRoute allowedRoles={['employee']}><EmployeeDashboard /></PrivateRoute>} />
+        <Route path="/employee/history" element={<PrivateRoute allowedRoles={['employee']}><EmployeeHistory /></PrivateRoute>} />
         <Route path="/admin" element={<PrivateRoute allowedRoles={['admin']}><AdminDashboard /></PrivateRoute>} />
         <Route path="/admin/roles" element={<PrivateRoute allowedRoles={['admin']}><RoleManagement /></PrivateRoute>} />
         <Route path="/admin/questions" element={<PrivateRoute allowedRoles={['admin']}><QuestionConfiguration /></PrivateRoute>} />
         <Route path="/admin/reports" element={<PrivateRoute allowedRoles={['admin']}><Reports /></PrivateRoute>} />
+        <Route path="/admin/employees" element={<PrivateRoute allowedRoles={['admin']}><AdminEmployeeList /></PrivateRoute>} />
+        <Route path="/admin/employees/:id" element={<PrivateRoute allowedRoles={['admin']}><AdminEmployeeProfile /></PrivateRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>

@@ -1,14 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { LayoutDashboard, CheckCircle2, Clock, AlertCircle, User, LogOut } from "lucide-react";
 import logoMesa from '../assets/logo-mesa.png';
 import { supabase } from '../lib/supabase';
+import { useCurrentUser } from '../hooks/useCurrentUser';
+import { getProjects } from '../services/projects';
+import { getProjectMembers, type ProjectMember } from '../services/projects';
+import { getEvaluationsByLeader } from '../services/evaluations';
+import type { Profile } from '../services/profiles';
 
 interface Employee {
   id: string;
   name: string;
   role: string;
-  status: 'completed' | 'in_progress' | 'pending';
+  status: 'completed' | 'pending';
   lastEvaluation?: string;
 }
 
@@ -19,45 +24,6 @@ interface Project {
   employees: Employee[];
   activeCount: number;
 }
-
-const mockProjects: Project[] = [
-  {
-    id: 'proj-1',
-    name: 'Plataforma Web',
-    description: 'Desenvolvimento da nova plataforma de gestão',
-    activeCount: 5,
-    employees: [
-      { id: 'emp-1', name: 'João Silva', role: 'Frontend Developer', status: 'completed', lastEvaluation: '2026-03-15' },
-      { id: 'emp-2', name: 'Maria Santos', role: 'Backend Developer', status: 'in_progress' },
-      { id: 'emp-3', name: 'Pedro Costa', role: 'UI/UX Designer', status: 'pending' },
-      { id: 'emp-4', name: 'Ana Rodrigues', role: 'QA Engineer', status: 'completed', lastEvaluation: '2026-04-01' },
-      { id: 'emp-5', name: 'Carlos Ferreira', role: 'DevOps', status: 'pending' },
-    ]
-  },
-  {
-    id: 'proj-2',
-    name: 'App Mobile',
-    description: 'Aplicação móvel iOS e Android',
-    activeCount: 3,
-    employees: [
-      { id: 'emp-6', name: 'Sofia Almeida', role: 'iOS Developer', status: 'in_progress' },
-      { id: 'emp-7', name: 'Miguel Pereira', role: 'Android Developer', status: 'completed', lastEvaluation: '2026-04-05' },
-      { id: 'emp-8', name: 'Rita Sousa', role: 'Product Manager', status: 'pending' },
-    ]
-  },
-  {
-    id: 'proj-3',
-    name: 'API Gateway',
-    description: 'Infraestrutura de microserviços',
-    activeCount: 4,
-    employees: [
-      { id: 'emp-9', name: 'Bruno Martins', role: 'Backend Developer', status: 'pending' },
-      { id: 'emp-10', name: 'Luísa Gomes', role: 'DevOps Engineer', status: 'in_progress' },
-      { id: 'emp-11', name: 'Tiago Oliveira', role: 'Architect', status: 'completed', lastEvaluation: '2026-03-28' },
-      { id: 'emp-12', name: 'Beatriz Lopes', role: 'Tech Lead', status: 'pending' },
-    ]
-  }
-];
 
 const statusConfig = {
   completed: {
@@ -85,7 +51,64 @@ const statusConfig = {
 
 export default function TechnicalLeaderDashboard() {
   const navigate = useNavigate();
+  const { userId } = useCurrentUser();
+  const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    const currentPeriod = new Date().toISOString().slice(0, 7);
+
+    Promise.all([
+      getProjects(),
+      getEvaluationsByLeader(userId),
+    ])
+      .then(async ([projectsData, leaderEvals]) => {
+        const enriched = await Promise.all(
+          projectsData.map(async (proj) => {
+            const members = await getProjectMembers(proj.id);
+            const employees: Employee[] = members.map((member) => {
+              const profile = (member as ProjectMember & { profiles?: Profile }).profiles;
+              const hasEval = leaderEvals.some(
+                (e) =>
+                  e.employee_id === member.employee_id &&
+                  e.project_id === proj.id &&
+                  e.evaluation_type === 'technical' &&
+                  e.period === currentPeriod
+              );
+              const lastEval = leaderEvals
+                .filter(
+                  (e) =>
+                    e.employee_id === member.employee_id &&
+                    e.project_id === proj.id &&
+                    e.evaluation_type === 'technical'
+                )
+                .sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? ''))[0];
+
+              return {
+                id: member.employee_id,
+                name: profile?.name ?? member.employee_id,
+                role: profile?.role ?? member.role ?? 'Colaborador',
+                status: hasEval ? ('completed' as const) : ('pending' as const),
+                lastEvaluation: lastEval?.created_at?.slice(0, 10),
+              };
+            });
+            return {
+              id: proj.id,
+              name: proj.name,
+              description: proj.description ?? '',
+              employees,
+              activeCount: employees.length,
+            };
+          })
+        );
+        setProjects(enriched);
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [userId]);
 
   const handleEvaluate = (projectId: string, employeeId: string) => {
     navigate(`/technical-leader/evaluate/${projectId}/${employeeId}`);
@@ -125,7 +148,7 @@ export default function TechnicalLeaderDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-muted-foreground mb-1 text-sm sm:text-base">Projetos Ativos</p>
-                <p className="text-2xl sm:text-3xl">{mockProjects.length}</p>
+                <p className="text-2xl sm:text-3xl">{projects.length}</p>
               </div>
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-primary/10 rounded-lg flex items-center justify-center">
                 <LayoutDashboard className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
@@ -137,7 +160,7 @@ export default function TechnicalLeaderDashboard() {
               <div>
                 <p className="text-muted-foreground mb-1 text-sm sm:text-base">Avaliações Concluídas</p>
                 <p className="text-2xl sm:text-3xl">
-                  {mockProjects.reduce((acc, p) => acc + p.employees.filter(e => e.status === 'completed').length, 0)}
+                  {projects.reduce((acc, p) => acc + p.employees.filter(e => e.status === 'completed').length, 0)}
                 </p>
               </div>
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-50 rounded-lg flex items-center justify-center">
@@ -150,7 +173,7 @@ export default function TechnicalLeaderDashboard() {
               <div>
                 <p className="text-muted-foreground mb-1 text-sm sm:text-base">Avaliações Pendentes</p>
                 <p className="text-2xl sm:text-3xl">
-                  {mockProjects.reduce((acc, p) => acc + p.employees.filter(e => e.status === 'pending').length, 0)}
+                  {projects.reduce((acc, p) => acc + p.employees.filter(e => e.status === 'pending').length, 0)}
                 </p>
               </div>
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-100 rounded-lg flex items-center justify-center">
@@ -165,8 +188,11 @@ export default function TechnicalLeaderDashboard() {
           <h2 className="mb-4 text-xl sm:text-2xl">Projetos</h2>
         </div>
 
+        {loading && (
+          <div className="text-center py-12 text-muted-foreground">Carregando projetos...</div>
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
-          {mockProjects.map((project) => (
+          {projects.map((project) => (
             <div
               key={project.id}
               onClick={() => setSelectedProject(project)}
