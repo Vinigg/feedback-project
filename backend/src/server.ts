@@ -1,21 +1,8 @@
-import express from 'express';
+import app from './app';
 
-import cors from 'cors';
-
-const app = express();
-
-const PORT = 3000;
-
-// Middleware
-
-app.use(cors());
-
-app.use(express.json());
-
-// Iniciar servidor
+const PORT = process.env.PORT ?? 3000;
 
 app.listen(PORT, () => {
-
   console.log(`Servidor rodando na porta ${PORT}`);
-
 });
+

@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { LayoutDashboard, CheckCircle2, Clock, AlertCircle, User, LogOut } from "lucide-react";
+import { LayoutDashboard, CheckCircle2, Clock, AlertCircle, User, LogOut, ClipboardCheck } from "lucide-react";
 import logoMesa from '../assets/logo-mesa.png';
 import { supabase } from '../lib/supabase';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { getProjects } from '../services/projects';
 import { getProjectMembers, type ProjectMember } from '../services/projects';
 import { getEvaluationsByLeader } from '../services/evaluations';
-import type { Profile } from '../services/profiles';
+import { getPendingApprovals, formatPeriodLabel, type FinalEvaluation } from '../services/finalEvaluations';
+import { getAllProfiles, type Profile } from '../services/profiles';
 
 interface Employee {
   id: string;
@@ -54,6 +55,8 @@ export default function BehavioralLeaderDashboard() {
   const { userId } = useCurrentUser();
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [pendingFinalEvals, setPendingFinalEvals] = useState<FinalEvaluation[]>([]);
+  const [pendingProfiles, setPendingProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -64,8 +67,12 @@ export default function BehavioralLeaderDashboard() {
     Promise.all([
       getProjects(),
       getEvaluationsByLeader(userId),
+      getPendingApprovals('behavioral'),
+      getAllProfiles(),
     ])
-      .then(async ([projectsData, leaderEvals]) => {
+      .then(async ([projectsData, leaderEvals, pendingEvals, allProfiles]) => {
+        setPendingFinalEvals(pendingEvals);
+        setPendingProfiles(allProfiles);
         const enriched = await Promise.all(
           projectsData.map(async (proj) => {
             const members = await getProjectMembers(proj.id);
@@ -250,7 +257,14 @@ export default function BehavioralLeaderDashboard() {
                           onClick={() => handleEvaluate(selectedProject.id, employee.id)}
                           className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm sm:text-base whitespace-nowrap"
                         >
-                          {employee.status === 'completed' ? 'Ver Avaliação' : 'Avaliar'}
+                          {employee.status === 'completed' ? 'Ver Feedback' : 'Feedback Recorrente'}
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); navigate(`/final-evaluation/new/${employee.id}`); }}
+                          className="flex items-center gap-1.5 px-3 py-2 border border-orange-300 text-orange-700 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors text-sm whitespace-nowrap"
+                        >
+                          <ClipboardCheck className="w-3.5 h-3.5" />
+                          Av. Final
                         </button>
                       </div>
                     </div>
@@ -262,6 +276,40 @@ export default function BehavioralLeaderDashboard() {
                         </p>
                       </div>
                     )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        {/* Pending Final Evaluation Approvals */}
+        {pendingFinalEvals.length > 0 && (
+          <div className="mt-6 bg-orange-50 border border-orange-200 rounded-xl overflow-hidden">
+            <div className="px-4 sm:px-6 py-3 sm:py-4 bg-orange-100/50 border-b border-orange-200 flex items-center gap-2">
+              <ClipboardCheck className="w-5 h-5 text-orange-600" />
+              <h3 className="text-base sm:text-lg text-orange-800">
+                Avaliações Finais Pendentes de Aprovação ({pendingFinalEvals.length})
+              </h3>
+            </div>
+            <div className="divide-y divide-orange-200">
+              {pendingFinalEvals.map((ev) => {
+                const empProfile = pendingProfiles.find((p) => p.id === ev.employee_id);
+                return (
+                  <div
+                    key={ev.id}
+                    onClick={() => navigate(`/final-evaluation/${ev.id}/review`)}
+                    className="px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-3 hover:bg-orange-100/40 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <User className="w-4 h-4 text-orange-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">{empProfile?.name ?? ev.employee_id}</p>
+                        <p className="text-xs text-muted-foreground">{formatPeriodLabel(ev.period)}</p>
+                      </div>
+                    </div>
+                    <span className="text-xs text-orange-600 font-medium">Revisar →</span>
                   </div>
                 );
               })}

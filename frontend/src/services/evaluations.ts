@@ -57,3 +57,8 @@ export async function getEvaluationsByProject(id: string): Promise<Evaluation[]>
 
   return requireData(data as Evaluation[] | null, error);
 }
+
+/** Alias explícito para liderança: busca feedbacks recorrentes de um colaborador */
+export async function getRecurringFeedbacksForEmployee(employeeId: string): Promise<Evaluation[]> {
+  return getEvaluationsByEmployee(employeeId);
+}

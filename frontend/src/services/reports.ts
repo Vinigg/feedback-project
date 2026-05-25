@@ -1,4 +1,14 @@
 import { getSupabaseClient, requireData, type ServiceRecord } from './supabaseService';
+import { averageScores } from './finalEvaluations';
+
+function average(values: number[]): number {
+  if (values.length === 0) return 0;
+  return round(values.reduce((sum, v) => sum + v, 0) / values.length);
+}
+
+function round(value: number): number {
+  return Number(value.toFixed(2));
+}
 
 export interface SummaryReport extends ServiceRecord {
   evaluated_employees: number;
@@ -24,10 +34,11 @@ export interface DepartmentStats extends ServiceRecord {
   overall: number;
 }
 
-interface ReportEvaluation extends ServiceRecord {
+interface ReportFinalEvaluation extends ServiceRecord {
   employee_id?: string;
-  evaluation_type?: string;
   period?: string;
+  technical_scores?: Record<string, number>;
+  behavioral_scores?: Record<string, number>;
 }
 
 interface ReportProfile extends ServiceRecord {
@@ -43,84 +54,43 @@ interface EmployeeScores {
   behavioral: number[];
 }
 
-const SCORE_FIELDS = ['overall', 'score', 'average', 'rating', 'final_score', 'total_score'];
-
-function average(values: number[]): number {
-  if (values.length === 0) {
-    return 0;
-  }
-
-  return round(values.reduce((sum, value) => sum + value, 0) / values.length);
-}
-
-function round(value: number): number {
-  return Number(value.toFixed(2));
-}
-
-function getEvaluationScore(evaluation: ReportEvaluation): number | null {
-  for (const field of SCORE_FIELDS) {
-    const value = evaluation[field];
-
-    if (typeof value === 'number') {
-      return value;
-    }
-
-    if (typeof value === 'string' && value.trim() !== '') {
-      const parsed = Number(value);
-
-      if (!Number.isNaN(parsed)) {
-        return parsed;
-      }
-    }
-  }
-
-  return null;
-}
-
 async function getReportData(period: string) {
   const client = getSupabaseClient();
   const { data: evaluations, error: evaluationsError } = await client
-    .from('evaluations')
+    .from('final_evaluations')
     .select('*')
-    .eq('period', period);
+    .eq('period', period)
+    .eq('status', 'published');
 
   const { data: profiles, error: profilesError } = await client
     .from('profiles')
     .select('*');
 
   return {
-    evaluations: requireData(evaluations as ReportEvaluation[] | null, evaluationsError),
+    evaluations: requireData(evaluations as ReportFinalEvaluation[] | null, evaluationsError),
     profiles: requireData(profiles as ReportProfile[] | null, profilesError),
   };
 }
 
-function groupScoresByEmployee(evaluations: ReportEvaluation[]): Map<string, EmployeeScores> {
+function groupScoresByEmployee(evaluations: ReportFinalEvaluation[]): Map<string, EmployeeScores> {
   const grouped = new Map<string, EmployeeScores>();
 
-  for (const evaluation of evaluations) {
-    if (!evaluation.employee_id) {
-      continue;
-    }
+  for (const ev of evaluations) {
+    if (!ev.employee_id) continue;
 
-    const score = getEvaluationScore(evaluation);
+    const techAvg = averageScores(ev.technical_scores);
+    const behavAvg = averageScores(ev.behavioral_scores);
 
-    if (score === null) {
-      continue;
-    }
-
-    const scores = grouped.get(evaluation.employee_id) ?? {
-      employeeId: evaluation.employee_id,
+    const scores = grouped.get(ev.employee_id) ?? {
+      employeeId: ev.employee_id,
       technical: [],
       behavioral: [],
     };
 
-    if (evaluation.evaluation_type === 'technical') {
-      scores.technical.push(score);
-    } else if (evaluation.evaluation_type === 'behavioral') {
-      scores.behavioral.push(score);
-    }
+    if (techAvg > 0) scores.technical.push(techAvg);
+    if (behavAvg > 0) scores.behavioral.push(behavAvg);
 
-    grouped.set(evaluation.employee_id, scores);
+    grouped.set(ev.employee_id, scores);
   }
 
   return grouped;
@@ -128,15 +98,13 @@ function groupScoresByEmployee(evaluations: ReportEvaluation[]): Map<string, Emp
 
 export async function getSummary(period: string): Promise<SummaryReport> {
   const { evaluations, profiles } = await getReportData(period);
-  const employeeIds = new Set(evaluations.map((evaluation) => evaluation.employee_id).filter(Boolean));
+  const employeeIds = new Set(evaluations.map((ev) => ev.employee_id).filter(Boolean));
   const technicalScores = evaluations
-    .filter((evaluation) => evaluation.evaluation_type === 'technical')
-    .map(getEvaluationScore)
-    .filter((score): score is number => score !== null);
+    .map((ev) => averageScores(ev.technical_scores))
+    .filter((s) => s > 0);
   const behavioralScores = evaluations
-    .filter((evaluation) => evaluation.evaluation_type === 'behavioral')
-    .map(getEvaluationScore)
-    .filter((score): score is number => score !== null);
+    .map((ev) => averageScores(ev.behavioral_scores))
+    .filter((s) => s > 0);
   const employees = profiles.filter((profile) => profile.role === 'employee');
 
   return {
