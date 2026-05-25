@@ -359,21 +359,6 @@ export default function EmployeeHistory() {
                           </div>
                         </div>
 
-                        {/* Soft Skills */}
-                        {evaluation.softSkills && (
-                          <div className="mb-4">
-                            <h5 className="text-sm font-medium mb-2">Soft Skills</h5>
-                            <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
-                              {Object.entries(evaluation.softSkills).map(([key, value]) => (
-                                <div key={key} className="bg-white rounded-lg p-2 sm:p-3 border border-purple-300">
-                                  <p className="text-xs text-muted-foreground mb-1 capitalize">{key}</p>
-                                  <p className="text-lg sm:text-xl font-semibold">{value.toFixed(1)}</p>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
                         {/* Behavioral Strengths */}
                         {evaluation.behavioralStrengths && evaluation.behavioralStrengths.length > 0 && (
                           <div className="mb-4">

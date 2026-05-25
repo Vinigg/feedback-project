@@ -7,6 +7,7 @@ interface RoleFormData {
   name: string;
   description: string;
   department: string;
+  [key: string]: unknown;
 }
 
 export default function RoleManagement() {
