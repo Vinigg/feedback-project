@@ -1,47 +1,80 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Search, User, TrendingUp, Award } from "lucide-react";
+import { ArrowLeft, Search, User, Users, ClipboardList } from "lucide-react";
+import { getProfilesByRole } from '../services/profiles';
+import { getSupabaseClient } from '../services/supabaseService';
 
-interface Employee {
+interface EmployeeEntry {
   id: string;
   name: string;
-  role: string;
-  department: string;
   email: string;
-  averageScore: number;
-  lastEvaluation: string;
+  evaluationCount: number;
+  lastEvaluation: string | null;
 }
-
-const mockEmployees: Employee[] = [
-  { id: 'emp-1', name: 'João Silva', role: 'Frontend Developer', department: 'Tecnologia', email: 'joao.silva@empresa.com', averageScore: 3.7, lastEvaluation: '2026-04-01' },
-  { id: 'emp-2', name: 'Maria Oliveira', role: 'Backend Developer', department: 'Tecnologia', email: 'maria.oliveira@empresa.com', averageScore: 3.9, lastEvaluation: '2026-04-10' },
-  { id: 'emp-3', name: 'Pedro Santos', role: 'Designer UI/UX', department: 'Design', email: 'pedro.santos@empresa.com', averageScore: 3.4, lastEvaluation: '2026-03-28' },
-  { id: 'emp-4', name: 'Ana Pereira', role: 'Analista de QA', department: 'Tecnologia', email: 'ana.pereira@empresa.com', averageScore: 4.0, lastEvaluation: '2026-04-05' },
-  { id: 'emp-5', name: 'Carlos Ribeiro', role: 'DevOps Engineer', department: 'Tecnologia', email: 'carlos.ribeiro@empresa.com', averageScore: 3.6, lastEvaluation: '2026-03-20' },
-  { id: 'emp-6', name: 'Fernanda Costa', role: 'Frontend Developer', department: 'Tecnologia', email: 'fernanda.costa@empresa.com', averageScore: 3.2, lastEvaluation: '2026-04-15' },
-];
-
-const getScoreColor = (score: number) => {
-  if (score >= 3.5) return 'text-emerald-600 bg-emerald-50 border-emerald-200';
-  if (score >= 2.5) return 'text-amber-600 bg-amber-50 border-amber-200';
-  return 'text-slate-600 bg-slate-50 border-slate-200';
-};
 
 export default function AdminEmployeeList() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
-  const [departmentFilter, setDepartmentFilter] = useState('Todos');
+  const [employees, setEmployees] = useState<EmployeeEntry[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const departments = ['Todos', ...Array.from(new Set(mockEmployees.map(e => e.department)))];
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      try {
+        const profiles = await getProfilesByRole('employee');
+        if (profiles.length === 0) {
+          setEmployees([]);
+          return;
+        }
+        const ids = profiles.map((p) => p.id);
+        const client = getSupabaseClient();
+        const { data: evals } = await client
+          .from('evaluations')
+          .select('employee_id, created_at')
+          .in('employee_id', ids);
 
-  const filtered = mockEmployees.filter(emp => {
-    const matchesSearch =
+        const evalMap = new Map<string, { count: number; lastDate: string | null }>();
+        for (const id of ids) evalMap.set(id, { count: 0, lastDate: null });
+
+        if (evals) {
+          for (const ev of evals as { employee_id: string; created_at: string }[]) {
+            const entry = evalMap.get(ev.employee_id);
+            if (entry) {
+              entry.count++;
+              if (!entry.lastDate || ev.created_at > entry.lastDate) {
+                entry.lastDate = ev.created_at;
+              }
+            }
+          }
+        }
+
+        setEmployees(
+          profiles.map((p) => ({
+            id: p.id,
+            name: p.name,
+            email: p.email,
+            evaluationCount: evalMap.get(p.id)?.count ?? 0,
+            lastEvaluation: evalMap.get(p.id)?.lastDate ?? null,
+          }))
+        );
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
+
+  const filtered = employees.filter(
+    (emp) =>
       emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesDept = departmentFilter === 'Todos' || emp.department === departmentFilter;
-    return matchesSearch && matchesDept;
-  });
+      emp.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const totalEvals = employees.reduce((acc, e) => acc + e.evaluationCount, 0);
+  const withEvals = employees.filter((e) => e.evaluationCount > 0).length;
 
   return (
     <div className="min-h-screen bg-background">
@@ -69,67 +102,56 @@ export default function AdminEmployeeList() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground mb-1">Total de Colaboradores</p>
-                <p className="text-2xl sm:text-3xl">{mockEmployees.length}</p>
+                <p className="text-2xl sm:text-3xl">{loading ? '—' : employees.length}</p>
               </div>
-              <User className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
+              <Users className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
             </div>
           </div>
           <div className="bg-white rounded-xl p-4 sm:p-6 border border-border">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Média Geral da Equipe</p>
-                <p className="text-2xl sm:text-3xl">
-                  {(mockEmployees.reduce((acc, e) => acc + e.averageScore, 0) / mockEmployees.length).toFixed(1)}
-                </p>
+                <p className="text-sm text-muted-foreground mb-1">Total de Avaliações</p>
+                <p className="text-2xl sm:text-3xl">{loading ? '—' : totalEvals}</p>
               </div>
-              <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-600" />
+              <ClipboardList className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-600" />
             </div>
           </div>
           <div className="bg-white rounded-xl p-4 sm:p-6 border border-border">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Melhor Média</p>
-                <p className="text-2xl sm:text-3xl">
-                  {Math.max(...mockEmployees.map(e => e.averageScore)).toFixed(1)}
-                </p>
+                <p className="text-sm text-muted-foreground mb-1">Com Avaliações</p>
+                <p className="text-2xl sm:text-3xl">{loading ? '—' : withEvals}</p>
               </div>
-              <Award className="w-6 h-6 sm:w-8 sm:h-8 text-amber-500" />
+              <User className="w-6 h-6 sm:w-8 sm:h-8 text-amber-500" />
             </div>
           </div>
         </div>
 
-        {/* Filters */}
+        {/* Search */}
         <div className="bg-white rounded-xl border border-border p-4 sm:p-6 mb-6">
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="Buscar por nome, cargo ou email..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 sm:pl-11 pr-4 py-2.5 sm:py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm sm:text-base"
-              />
-            </div>
-            <select
-              value={departmentFilter}
-              onChange={(e) => setDepartmentFilter(e.target.value)}
-              className="py-2.5 sm:py-3 px-4 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm sm:text-base"
-            >
-              {departments.map(dept => (
-                <option key={dept} value={dept}>{dept}</option>
-              ))}
-            </select>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Buscar por nome ou email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 sm:pl-11 pr-4 py-2.5 sm:py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm sm:text-base"
+            />
           </div>
           <p className="text-xs sm:text-sm text-muted-foreground mt-3">
-            {filtered.length} colaborador(es) encontrado(s)
+            {loading ? 'Carregando...' : `${filtered.length} colaborador(es) encontrado(s)`}
           </p>
         </div>
 
         {/* Employee List */}
         <div className="bg-white rounded-xl border border-border overflow-hidden">
           <div className="divide-y divide-border">
-            {filtered.length === 0 ? (
+            {loading ? (
+              <div className="px-6 py-12 text-center text-muted-foreground text-sm">
+                Carregando colaboradores...
+              </div>
+            ) : filtered.length === 0 ? (
               <div className="px-6 py-12 text-center text-muted-foreground">
                 Nenhum colaborador encontrado.
               </div>
@@ -146,16 +168,17 @@ export default function AdminEmployeeList() {
                     </div>
                     <div>
                       <p className="font-medium">{emp.name}</p>
-                      <p className="text-sm text-muted-foreground">{emp.role} · {emp.department}</p>
                       <p className="text-xs text-muted-foreground">{emp.email}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-4 sm:flex-col sm:items-end">
-                    <span className={`px-3 py-1 rounded-full text-sm border ${getScoreColor(emp.averageScore)}`}>
-                      Média: {emp.averageScore.toFixed(1)}
+                    <span className="px-3 py-1 rounded-full text-sm border bg-blue-50 text-blue-700 border-blue-200">
+                      {emp.evaluationCount} avaliação(ões)
                     </span>
                     <p className="text-xs text-muted-foreground">
-                      Última avaliação: {new Date(emp.lastEvaluation).toLocaleDateString('pt-PT')}
+                      {emp.lastEvaluation
+                        ? `Última: ${new Date(emp.lastEvaluation).toLocaleDateString('pt-PT')}`
+                        : 'Sem avaliações'}
                     </p>
                   </div>
                 </div>
