@@ -1,6 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Search, Calendar, Award, TrendingUp, FileText, Filter, ThumbsUp, AlertTriangle } from "lucide-react";
+import { useCurrentUser } from '../hooks/useCurrentUser';
+import { getEvaluationsByEmployee } from '../services/evaluations';
+import { getProjects, type Project } from '../services/projects';
+import { getAllProfiles, type Profile } from '../services/profiles';
 
 interface Evaluation {
   id: string;
@@ -8,66 +12,77 @@ interface Evaluation {
   date: string;
   technicalLeader?: string;
   behavioralLeader?: string;
-  metrics?: {
-    velocidade: number;
-    bugs: number;
-    volume: number;
-    clareza: number;
-  };
-  softSkills?: {
-    iniciativa: number;
-    proatividade: number;
-    comunicacao: number;
-  };
+  technicalFeedback?: string;
+  behavioralFeedback?: string;
   technicalStrengths?: string[];
   technicalImprovements?: string[];
   behavioralStrengths?: string[];
   behavioralImprovements?: string[];
-  technicalFeedback?: string;
-  behavioralFeedback?: string;
   overallScore: number;
 }
 
-const mockEvaluations: Evaluation[] = [
-  {
-    id: 'eval-1',
-    project: 'Plataforma Web',
-    date: '2026-04-01',
-    technicalLeader: 'Carlos Mendes',
-    behavioralLeader: 'Ana Silva (RH)',
-    metrics: { velocidade: 4, bugs: 3, volume: 4, clareza: 4 },
-    softSkills: { iniciativa: 3, proatividade: 4, comunicacao: 4 },
-    technicalStrengths: ['Qualidade de Código', 'Resolução de Problemas', 'Arquitetura de Software'],
-    technicalImprovements: ['Documentação Técnica', 'Testes Unitários'],
-    behavioralStrengths: ['Comunicação Clara', 'Trabalho em Equipe', 'Colaboração'],
-    behavioralImprovements: ['Iniciativa', 'Proatividade'],
-    technicalFeedback: 'Excelente trabalho na implementação das novas features do painel de controlo. O código entregue apresenta alta qualidade, com boas práticas e arquitetura bem pensada. Recomendo focar em melhorar a documentação técnica das soluções implementadas e aumentar a cobertura de testes unitários.',
-    behavioralFeedback: 'A comunicação com a equipe tem sido exemplar, sempre disponível para ajudar colegas e compartilhar conhecimento. Demonstra excelente capacidade de trabalho em equipe. Recomendo focar em aumentar a proatividade e iniciativa na identificação de problemas antes que se tornem críticos.',
-    overallScore: 3.8
-  },
-  {
-    id: 'eval-2',
-    project: 'App Mobile',
-    date: '2026-03-15',
-    technicalLeader: 'Miguel Santos',
-    metrics: { velocidade: 3, bugs: 4, volume: 3, clareza: 4 },
-    technicalStrengths: ['Qualidade de Código', 'Adaptabilidade'],
-    technicalImprovements: ['Gestão de Débito Técnico', 'Performance e Otimização'],
-    technicalFeedback: 'Demonstrou boa adaptação às tecnologias mobile (React Native), considerando que era a primeira vez trabalhando nesta stack. A qualidade das entregas está acima da média, com código limpo e bem estruturado. Recomendo focar em melhorar aspectos de performance e otimização das aplicações móveis.',
-    overallScore: 3.5
-  },
-];
-
-const projects = ['Todos', 'Plataforma Web', 'App Mobile', 'API Gateway', 'Dashboard Analytics'];
-
 export default function EmployeeHistory() {
   const navigate = useNavigate();
+  const { userId } = useCurrentUser();
+
+  const [allEvaluations, setAllEvaluations] = useState<Evaluation[]>([]);
+  const [projectNames, setProjectNames] = useState<string[]>(['Todos']);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProject, setSelectedProject] = useState('Todos');
   const [dateFilter, setDateFilter] = useState('');
   const [expandedEval, setExpandedEval] = useState<string | null>(null);
 
-  const filteredEvaluations = mockEvaluations.filter((item) => {
+  useEffect(() => {
+    if (!userId) return;
+    Promise.all([
+      getEvaluationsByEmployee(userId),
+      getProjects(),
+      getAllProfiles(),
+    ])
+      .then(([evals, allProjects, allProfiles]) => {
+        const projectsById = new Map<string, Project>(allProjects.map((p) => [p.id, p]));
+        const profilesById = new Map<string, Profile>(allProfiles.map((p) => [p.id, p]));
+
+        const mapped: Evaluation[] = evals.map((ev) => {
+          const answers = (ev.answers as Record<string, string>) ?? {};
+          const projectName = ev.project_id
+            ? (projectsById.get(ev.project_id)?.name ?? 'Projeto desconhecido')
+            : 'Sem projeto';
+          const leaderName = ev.leader_id
+            ? (profilesById.get(ev.leader_id)?.name ?? 'Líder')
+            : undefined;
+
+          const technicalFeedback = ev.evaluation_type === 'technical'
+            ? [answers.destaqueTecnico, answers.pontoAtencao, answers.nivelEntrega, answers.aprendizado, answers.mentoria]
+                .filter(Boolean).join('\n\n')
+            : undefined;
+          const behavioralFeedback = ev.evaluation_type === 'behavioral'
+            ? [answers.destaqueComportamental, answers.antecipacaoRiscos, answers.apoioColegas, answers.qualidadeComunicacao, answers.iniciativa]
+                .filter(Boolean).join('\n\n')
+            : undefined;
+
+          return {
+            id: ev.id,
+            project: projectName,
+            date: ev.created_at ?? ev.period,
+            technicalLeader: ev.evaluation_type === 'technical' ? leaderName : undefined,
+            behavioralLeader: ev.evaluation_type === 'behavioral' ? leaderName : undefined,
+            technicalFeedback,
+            behavioralFeedback,
+            overallScore: 0,
+          };
+        });
+
+        setAllEvaluations(mapped);
+        const names = Array.from(new Set(mapped.map((e) => e.project)));
+        setProjectNames(['Todos', ...names]);
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [userId]);
+
+  const filteredEvaluations = allEvaluations.filter((item) => {
     const matchesSearch = item.project.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (item.technicalLeader?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
                          (item.behavioralLeader?.toLowerCase().includes(searchTerm.toLowerCase()) || false);
@@ -76,12 +91,6 @@ export default function EmployeeHistory() {
 
     return matchesSearch && matchesProject && matchesDate;
   });
-
-  const getScoreColor = (score: number) => {
-    if (score >= 3.5) return 'text-emerald-600 bg-emerald-50 border-emerald-200';
-    if (score >= 2.5) return 'text-amber-600 bg-amber-50 border-amber-200';
-    return 'text-slate-600 bg-slate-50 border-slate-200';
-  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -132,7 +141,7 @@ export default function EmployeeHistory() {
                   onChange={(e) => setSelectedProject(e.target.value)}
                   className="w-full pl-10 sm:pl-11 pr-4 py-2.5 sm:py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none text-sm sm:text-base"
                 >
-                  {projects.map(project => (
+                  {projectNames.map(project => (
                     <option key={project} value={project}>{project}</option>
                   ))}
                 </select>
@@ -178,9 +187,9 @@ export default function EmployeeHistory() {
           <div className="bg-white rounded-xl p-4 sm:p-6 border border-border">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-muted-foreground mb-1 text-sm sm:text-base">Média Geral</p>
+                <p className="text-muted-foreground mb-1 text-sm sm:text-base">Total de Avaliações</p>
                 <p className="text-2xl sm:text-3xl">
-                  {(filteredEvaluations.reduce((acc, e) => acc + e.overallScore, 0) / filteredEvaluations.length).toFixed(1)}
+                  {loading ? '—' : allEvaluations.length}
                 </p>
               </div>
               <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-600" />
@@ -190,9 +199,9 @@ export default function EmployeeHistory() {
           <div className="bg-white rounded-xl p-4 sm:p-6 border border-border">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-muted-foreground mb-1 text-sm sm:text-base">Melhor Avaliação</p>
+                <p className="text-muted-foreground mb-1 text-sm sm:text-base">Técnicas</p>
                 <p className="text-2xl sm:text-3xl">
-                  {Math.max(...filteredEvaluations.map(e => e.overallScore)).toFixed(1)}
+                  {loading ? '—' : allEvaluations.filter(e => e.technicalLeader).length}
                 </p>
               </div>
               <Award className="w-6 h-6 sm:w-8 sm:h-8 text-amber-500" />
@@ -212,6 +221,16 @@ export default function EmployeeHistory() {
 
         {/* Evaluations List */}
         <div className="space-y-4">
+          {loading && (
+            <div className="bg-white rounded-xl border border-border p-12 text-center">
+              <p className="text-muted-foreground">Carregando avaliações...</p>
+            </div>
+          )}
+          {!loading && filteredEvaluations.length === 0 && (
+            <div className="bg-white rounded-xl border border-border p-12 text-center">
+              <p className="text-muted-foreground">Nenhuma avaliação encontrada</p>
+            </div>
+          )}
           {filteredEvaluations.map((evaluation) => (
             <div
               key={evaluation.id}
@@ -225,8 +244,8 @@ export default function EmployeeHistory() {
                   <div className="flex-1 w-full">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
                       <h3 className="text-base sm:text-lg">{evaluation.project}</h3>
-                      <span className={`px-3 py-1 rounded-full text-xs sm:text-sm border ${getScoreColor(evaluation.overallScore)} self-start`}>
-                        Score: {evaluation.overallScore.toFixed(1)}
+                      <span className="px-3 py-1 rounded-full text-xs sm:text-sm border bg-slate-50 text-slate-700 border-slate-200 self-start">
+                        {evaluation.technicalLeader ? 'Técnica' : 'Comportamental'}
                       </span>
                     </div>
                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
@@ -272,25 +291,6 @@ export default function EmployeeHistory() {
                             <p className="text-xs sm:text-sm text-muted-foreground">por {evaluation.technicalLeader}</p>
                           </div>
                         </div>
-
-                        {/* Metrics */}
-                        {evaluation.metrics && (
-                          <div className="mb-4">
-                            <h5 className="text-sm font-medium mb-2">Métricas de Desempenho</h5>
-                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-                              {Object.entries(evaluation.metrics).map(([key, value]) => (
-                                <div key={key} className="bg-white rounded-lg p-2 sm:p-3 border border-blue-300">
-                                  <p className="text-xs text-muted-foreground mb-1">
-                                    {key === 'velocidade' ? 'Velocidade' :
-                                     key === 'bugs' ? 'Bugs' :
-                                     key === 'volume' ? 'Volume' : 'Clareza'}
-                                  </p>
-                                  <p className="text-lg sm:text-xl font-semibold">{value.toFixed(1)}</p>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
 
                         {/* Technical Strengths */}
                         {evaluation.technicalStrengths && evaluation.technicalStrengths.length > 0 && (
