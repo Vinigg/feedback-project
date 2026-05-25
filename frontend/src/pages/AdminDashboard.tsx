@@ -1,24 +1,27 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, FileQuestion, LogOut, BarChart3, UserCheck } from "lucide-react";
+import { Users, FileQuestion, LogOut, BarChart3, UserCheck, ClipboardCheck } from "lucide-react";
 import logoMesa from '../assets/logo-mesa.png';
 import { supabase } from '../lib/supabase';
 import { getRoles } from '../services/roles';
 import { getQuestions } from '../services/questions';
 import { getProfilesByRole } from '../services/profiles';
+import { getAllFinalEvaluations } from '../services/finalEvaluations';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  const [stats, setStats] = useState({ roles: 0, questions: 0, employees: 0 });
+  const [stats, setStats] = useState({ roles: 0, questions: 0, employees: 0, pendingApprovals: 0 });
 
   useEffect(() => {
     Promise.all([
       getRoles(),
       getQuestions(),
       getProfilesByRole('employee'),
+      getAllFinalEvaluations(),
     ])
-      .then(([roles, questions, employees]) => {
-        setStats({ roles: roles.length, questions: questions.length, employees: employees.length });
+      .then(([roles, questions, employees, finalEvals]) => {
+        const pendingApprovals = finalEvals.filter((e) => e.status === 'pending_approval').length;
+        setStats({ roles: roles.length, questions: questions.length, employees: employees.length, pendingApprovals });
       })
       .catch(console.error);
   }, []);
@@ -29,6 +32,14 @@ export default function AdminDashboard() {
   };
 
   const adminCards = [
+    {
+      id: 'final-evaluations',
+      title: 'Avaliações Finais',
+      description: 'Criar, revisar e aprovar avaliações finais consolidadas',
+      icon: ClipboardCheck,
+      color: 'bg-orange-500',
+      path: '/admin/final-evaluations'
+    },
     {
       id: 'roles',
       title: 'Gestão de Cargos',
@@ -127,6 +138,10 @@ export default function AdminDashboard() {
           <div className="bg-white rounded-xl p-4 sm:p-6 border border-border">
             <p className="text-sm text-muted-foreground mb-1">Colaboradores</p>
             <p className="text-2xl sm:text-3xl font-semibold">{stats.employees}</p>
+          </div>
+          <div className={`bg-white rounded-xl p-4 sm:p-6 border ${stats.pendingApprovals > 0 ? 'border-amber-300' : 'border-border'}`}>
+            <p className="text-sm text-muted-foreground mb-1">Aprovações Pendentes</p>
+            <p className={`text-2xl sm:text-3xl font-semibold ${stats.pendingApprovals > 0 ? 'text-amber-600' : ''}`}>{stats.pendingApprovals}</p>
           </div>
         </div>
       </div>
