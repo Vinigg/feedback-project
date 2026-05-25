@@ -35,6 +35,7 @@ export async function analyzeWithGemini(
   feedbacks: FeedbackEntry[],
 ): Promise<AIInsights> {
   const apiKey = process.env.GEMINI_API_KEY;
+  const modelName = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash';
   if (!apiKey) {
     throw new Error('GEMINI_API_KEY não configurada no servidor.');
   }
@@ -82,7 +83,7 @@ IMPORTANTE: Retorne APENAS o JSON válido, sem markdown, sem código delimitador
 `.trim();
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const model = genAI.getGenerativeModel({ model: modelName });
   const result = await model.generateContent(prompt);
   const text = result.response.text().trim();
 
