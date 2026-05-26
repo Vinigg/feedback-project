@@ -77,7 +77,8 @@ export default function BehavioralLeaderDashboard() {
           projectsData.map(async (proj) => {
             const members = await getProjectMembers(proj.id);
             const employees: Employee[] = members.map((member) => {
-              const profile = (member as ProjectMember & { profiles?: Profile }).profiles;
+              const joinedProfile = (member as ProjectMember & { profiles?: Profile }).profiles;
+              const profile = joinedProfile ?? allProfiles.find((item) => item.id === member.employee_id);
               const hasEval = leaderEvals.some(
                 (e) =>
                   e.employee_id === member.employee_id &&
