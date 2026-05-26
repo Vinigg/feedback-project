@@ -2,22 +2,11 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, TrendingUp, Users, Award, Calendar } from "lucide-react";
 import { getSummary, getTopPerformers, getDepartmentStats, type SummaryReport, type TopPerformer, type DepartmentStats } from '../services/reports';
-
-function getPeriodOptions() {
-  const options = [];
-  const now = new Date();
-  for (let i = 0; i < 4; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const value = d.toISOString().slice(0, 7);
-    const label = d.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
-    options.push({ value, label });
-  }
-  return options;
-}
+import { getSemestralPeriods } from '../services/finalEvaluations';
 
 export default function Reports() {
   const navigate = useNavigate();
-  const periodOptions = getPeriodOptions();
+  const periodOptions = getSemestralPeriods(4);
   const [selectedPeriod, setSelectedPeriod] = useState(periodOptions[0].value);
   const [summary, setSummary] = useState<SummaryReport | null>(null);
   const [topPerformers, setTopPerformers] = useState<TopPerformer[]>([]);

@@ -1,4 +1,6 @@
 export * from './evaluations';
+export * from './finalEvaluations';
+export * from './aiService';
 export * from './profiles';
 export * from './projects';
 export * from './questions';

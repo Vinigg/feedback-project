@@ -1,96 +1,68 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Search, Calendar, Award, TrendingUp, FileText, Filter, ThumbsUp, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Search, Calendar, Award, TrendingUp, FileText, Filter, Star, ChevronDown, ChevronUp } from "lucide-react";
 import { useCurrentUser } from '../hooks/useCurrentUser';
-import { getEvaluationsByEmployee } from '../services/evaluations';
-import { getProjects, type Project } from '../services/projects';
-import { getAllProfiles, type Profile } from '../services/profiles';
+import {
+  getPublishedFinalEvaluations,
+  formatPeriodLabel,
+  averageScores,
+  TECHNICAL_COMPETENCIES,
+  BEHAVIORAL_COMPETENCIES,
+  type FinalEvaluation,
+} from '../services/finalEvaluations';
 
-interface Evaluation {
-  id: string;
-  project: string;
-  date: string;
-  technicalLeader?: string;
-  behavioralLeader?: string;
-  technicalFeedback?: string;
-  behavioralFeedback?: string;
-  technicalStrengths?: string[];
-  technicalImprovements?: string[];
-  behavioralStrengths?: string[];
-  behavioralImprovements?: string[];
-  overallScore: number;
+const CAREER_COLORS: Record<string, string> = {
+  efetivação: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  promoção: 'bg-blue-50 text-blue-700 border-blue-200',
+  permanência: 'bg-amber-50 text-amber-700 border-amber-200',
+  desligamento: 'bg-red-50 text-red-700 border-red-200',
+};
+
+function ScoreDots({ value }: { value: number }) {
+  return (
+    <div className="flex gap-0.5">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <div
+          key={n}
+          className={`w-4 h-4 rounded text-[10px] font-medium flex items-center justify-center ${
+            n <= value ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'
+          }`}
+        >
+          {n}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export default function EmployeeHistory() {
   const navigate = useNavigate();
   const { userId } = useCurrentUser();
 
-  const [allEvaluations, setAllEvaluations] = useState<Evaluation[]>([]);
-  const [projectNames, setProjectNames] = useState<string[]>(['Todos']);
+  const [allEvaluations, setAllEvaluations] = useState<FinalEvaluation[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedProject, setSelectedProject] = useState('Todos');
-  const [dateFilter, setDateFilter] = useState('');
+  const [periodFilter, setPeriodFilter] = useState('');
   const [expandedEval, setExpandedEval] = useState<string | null>(null);
 
   useEffect(() => {
     if (!userId) return;
-    Promise.all([
-      getEvaluationsByEmployee(userId),
-      getProjects(),
-      getAllProfiles(),
-    ])
-      .then(([evals, allProjects, allProfiles]) => {
-        const projectsById = new Map<string, Project>(allProjects.map((p) => [p.id, p]));
-        const profilesById = new Map<string, Profile>(allProfiles.map((p) => [p.id, p]));
-
-        const mapped: Evaluation[] = evals.map((ev) => {
-          const answers = (ev.answers as Record<string, string>) ?? {};
-          const projectName = ev.project_id
-            ? (projectsById.get(ev.project_id)?.name ?? 'Projeto desconhecido')
-            : 'Sem projeto';
-          const leaderName = ev.leader_id
-            ? (profilesById.get(ev.leader_id)?.name ?? 'Líder')
-            : undefined;
-
-          const technicalFeedback = ev.evaluation_type === 'technical'
-            ? [answers.destaqueTecnico, answers.pontoAtencao, answers.nivelEntrega, answers.aprendizado, answers.mentoria]
-                .filter(Boolean).join('\n\n')
-            : undefined;
-          const behavioralFeedback = ev.evaluation_type === 'behavioral'
-            ? [answers.destaqueComportamental, answers.antecipacaoRiscos, answers.apoioColegas, answers.qualidadeComunicacao, answers.iniciativa]
-                .filter(Boolean).join('\n\n')
-            : undefined;
-
-          return {
-            id: ev.id,
-            project: projectName,
-            date: ev.created_at ?? ev.period,
-            technicalLeader: ev.evaluation_type === 'technical' ? leaderName : undefined,
-            behavioralLeader: ev.evaluation_type === 'behavioral' ? leaderName : undefined,
-            technicalFeedback,
-            behavioralFeedback,
-            overallScore: 0,
-          };
-        });
-
-        setAllEvaluations(mapped);
-        const names = Array.from(new Set(mapped.map((e) => e.project)));
-        setProjectNames(['Todos', ...names]);
-      })
+    getPublishedFinalEvaluations(userId)
+      .then(setAllEvaluations)
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [userId]);
 
-  const filteredEvaluations = allEvaluations.filter((item) => {
-    const matchesSearch = item.project.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (item.technicalLeader?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
-                         (item.behavioralLeader?.toLowerCase().includes(searchTerm.toLowerCase()) || false);
-    const matchesProject = selectedProject === 'Todos' || item.project === selectedProject;
-    const matchesDate = !dateFilter || item.date.startsWith(dateFilter);
-
-    return matchesSearch && matchesProject && matchesDate;
+  const filteredEvaluations = allEvaluations.filter((ev) => {
+    const period = formatPeriodLabel(ev.period).toLowerCase();
+    if (searchTerm && !period.includes(searchTerm.toLowerCase())) return false;
+    if (periodFilter && ev.period !== periodFilter) return false;
+    return true;
   });
+
+  const latestEval = allEvaluations[0];
+  const avgTech = latestEval ? averageScores(latestEval.technical_scores) : 0;
+  const avgBehav = latestEval ? averageScores(latestEval.behavioral_scores) : 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -99,78 +71,59 @@ export default function EmployeeHistory() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
           <button
             onClick={() => navigate('/employee')}
-            className="flex items-center gap-2 text-white/60 hover:text-white mb-3 sm:mb-4 transition-colors text-sm sm:text-base"
+            className="flex items-center gap-2 text-white/60 hover:text-white mb-3 sm:mb-4 transition-colors text-sm"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Voltar ao Dashboard</span>
+            Voltar ao Dashboard
           </button>
-          <h1 className="text-xl sm:text-2xl text-white">Histórico de Avaliações</h1>
-          <p className="text-white/60 mt-1 text-sm sm:text-base">
-            Visualize todas as suas avaliações de desempenho
+          <h1 className="text-xl sm:text-2xl text-white">HistÃ³rico de AvaliaÃ§Ãµes Finais</h1>
+          <p className="text-white/60 mt-1 text-sm">
+            Suas avaliaÃ§Ãµes oficiais de desempenho
           </p>
         </div>
       </header>
 
-      {/* Filters - Sticky */}
-      <div className="sticky top-[var(--header-height,88px)] z-10 bg-background py-4 border-b border-border shadow-sm">
+      {/* Filters */}
+      <div className="sticky top-[88px] z-10 bg-background py-3 border-b border-border shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="bg-white rounded-xl border border-border p-4 sm:p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Filter className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
-              <h3 className="text-base sm:text-lg">Filtros e Pesquisa</h3>
+          <div className="bg-white rounded-xl border border-border p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Filter className="w-4 h-4 text-muted-foreground" />
+              <h3 className="text-sm font-medium">Filtros</h3>
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-              {/* Search */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
                   type="text"
-                  placeholder="Pesquisar por projeto ou líder..."
+                  placeholder="Pesquisar por perÃ­odo..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 sm:pl-11 pr-4 py-2.5 sm:py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm sm:text-base"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>
-
-              {/* Project Filter */}
               <div className="relative">
-                <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <select
-                  value={selectedProject}
-                  onChange={(e) => setSelectedProject(e.target.value)}
-                  className="w-full pl-10 sm:pl-11 pr-4 py-2.5 sm:py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none text-sm sm:text-base"
+                  value={periodFilter}
+                  onChange={(e) => setPeriodFilter(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-border text-sm bg-white appearance-none focus:outline-none focus:ring-2 focus:ring-primary/20"
                 >
-                  {projectNames.map(project => (
-                    <option key={project} value={project}>{project}</option>
+                  <option value="">Todos os perÃ­odos</option>
+                  {Array.from(new Set(allEvaluations.map((e) => e.period))).map((p) => (
+                    <option key={p} value={p}>{formatPeriodLabel(p)}</option>
                   ))}
                 </select>
               </div>
-
-              {/* Date Filter */}
-              <div className="relative sm:col-span-2 lg:col-span-1">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
-                <input
-                  type="month"
-                  value={dateFilter}
-                  onChange={(e) => setDateFilter(e.target.value)}
-                  className="w-full pl-10 sm:pl-11 pr-4 py-2.5 sm:py-3 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm sm:text-base"
-                />
-              </div>
             </div>
-
-            <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-              <p className="text-xs sm:text-sm text-muted-foreground">
-                {filteredEvaluations.length} avaliação(ões) encontrada(s)
+            <div className="mt-3 flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">
+                {filteredEvaluations.length} avaliaÃ§Ã£o(Ãµes) encontrada(s)
               </p>
-              {(searchTerm || selectedProject !== 'Todos' || dateFilter) && (
+              {(searchTerm || periodFilter) && (
                 <button
-                  onClick={() => {
-                    setSearchTerm('');
-                    setSelectedProject('Todos');
-                    setDateFilter('');
-                  }}
-                  className="text-xs sm:text-sm text-primary hover:text-primary/80 transition-colors"
+                  onClick={() => { setSearchTerm(''); setPeriodFilter(''); }}
+                  className="text-xs text-primary hover:text-primary/80"
                 >
                   Limpar Filtros
                 </button>
@@ -181,253 +134,155 @@ export default function EmployeeHistory() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-
-        {/* Summary Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-          <div className="bg-white rounded-xl p-4 sm:p-6 border border-border">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-muted-foreground mb-1 text-sm sm:text-base">Total de Avaliações</p>
-                <p className="text-2xl sm:text-3xl">
-                  {loading ? '—' : allEvaluations.length}
-                </p>
-              </div>
-              <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-600" />
+        {/* Stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <div className="bg-white rounded-xl p-5 border border-border flex items-center justify-between">
+            <div>
+              <p className="text-muted-foreground text-sm mb-1">AvaliaÃ§Ãµes Finais</p>
+              <p className="text-3xl">{loading ? 'â€”' : allEvaluations.length}</p>
             </div>
+            <TrendingUp className="w-7 h-7 text-emerald-500" />
           </div>
-
-          <div className="bg-white rounded-xl p-4 sm:p-6 border border-border">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-muted-foreground mb-1 text-sm sm:text-base">Técnicas</p>
-                <p className="text-2xl sm:text-3xl">
-                  {loading ? '—' : allEvaluations.filter(e => e.technicalLeader).length}
-                </p>
-              </div>
-              <Award className="w-6 h-6 sm:w-8 sm:h-8 text-amber-500" />
+          <div className="bg-white rounded-xl p-5 border border-border flex items-center justify-between">
+            <div>
+              <p className="text-muted-foreground text-sm mb-1">MÃ©dia TÃ©cnica (Ãºltima)</p>
+              <p className="text-3xl">{loading ? 'â€”' : latestEval ? avgTech.toFixed(1) : 'â€”'}</p>
             </div>
+            <Award className="w-7 h-7 text-blue-500" />
           </div>
-
-          <div className="bg-white rounded-xl p-4 sm:p-6 border border-border sm:col-span-2 lg:col-span-1">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-muted-foreground mb-1 text-sm sm:text-base">Total de Avaliações</p>
-                <p className="text-2xl sm:text-3xl">{filteredEvaluations.length}</p>
-              </div>
-              <FileText className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
+          <div className="bg-white rounded-xl p-5 border border-border flex items-center justify-between">
+            <div>
+              <p className="text-muted-foreground text-sm mb-1">MÃ©dia Comportamental (Ãºltima)</p>
+              <p className="text-3xl">{loading ? 'â€”' : latestEval ? avgBehav.toFixed(1) : 'â€”'}</p>
             </div>
+            <Star className="w-7 h-7 text-purple-500" />
           </div>
         </div>
 
-        {/* Evaluations List */}
-        <div className="space-y-4">
-          {loading && (
-            <div className="bg-white rounded-xl border border-border p-12 text-center">
-              <p className="text-muted-foreground">Carregando avaliações...</p>
-            </div>
-          )}
-          {!loading && filteredEvaluations.length === 0 && (
-            <div className="bg-white rounded-xl border border-border p-12 text-center">
-              <p className="text-muted-foreground">Nenhuma avaliação encontrada</p>
-            </div>
-          )}
-          {filteredEvaluations.map((evaluation) => (
-            <div
-              key={evaluation.id}
-              className="bg-white rounded-xl border border-border overflow-hidden"
-            >
-              <div
-                onClick={() => setExpandedEval(expandedEval === evaluation.id ? null : evaluation.id)}
-                className="p-4 sm:p-6 cursor-pointer hover:bg-muted/30 transition-colors"
-              >
-                <div className="flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-4">
-                  <div className="flex-1 w-full">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
-                      <h3 className="text-base sm:text-lg">{evaluation.project}</h3>
-                      <span className="px-3 py-1 rounded-full text-xs sm:text-sm border bg-slate-50 text-slate-700 border-slate-200 self-start">
-                        {evaluation.technicalLeader ? 'Técnica' : 'Comportamental'}
-                      </span>
-                    </div>
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
-                        {new Date(evaluation.date).toLocaleDateString('pt-PT', {
-                          day: 'numeric',
-                          month: 'long',
-                          year: 'numeric'
-                        })}
-                      </span>
-                      {evaluation.technicalLeader && evaluation.behavioralLeader && (
-                        <span>Avaliação Completa (Técnica + Comportamental)</span>
-                      )}
-                      {evaluation.technicalLeader && !evaluation.behavioralLeader && (
-                        <span>Avaliação Técnica: {evaluation.technicalLeader}</span>
-                      )}
-                      {evaluation.behavioralLeader && !evaluation.technicalLeader && (
-                        <span>Avaliação Comportamental: {evaluation.behavioralLeader}</span>
-                      )}
-                    </div>
-                  </div>
-
-                  <button className="text-primary hover:text-primary/80 text-sm sm:text-base self-end sm:self-auto">
-                    {expandedEval === evaluation.id ? 'Ocultar' : 'Ver Detalhes'}
-                  </button>
-                </div>
-              </div>
-
-              {expandedEval === evaluation.id && (
-                <div className="px-4 sm:px-6 pb-4 sm:pb-6 border-t border-border bg-muted/20">
-                  <div className="pt-4 sm:pt-6 space-y-6">
-
-                    {/* Technical Evaluation Section */}
-                    {evaluation.technicalLeader && (
-                      <div className="bg-blue-50 rounded-xl p-4 sm:p-5 border-2 border-blue-200">
-                        <div className="flex items-center gap-2 mb-4">
-                          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                            <span className="text-white text-sm">T</span>
-                          </div>
-                          <div>
-                            <h4 className="text-base sm:text-lg font-semibold">Feedback Técnico</h4>
-                            <p className="text-xs sm:text-sm text-muted-foreground">por {evaluation.technicalLeader}</p>
-                          </div>
-                        </div>
-
-                        {/* Technical Strengths */}
-                        {evaluation.technicalStrengths && evaluation.technicalStrengths.length > 0 && (
-                          <div className="mb-4">
-                            <div className="flex items-center gap-2 mb-2">
-                              <ThumbsUp className="w-4 h-4 text-emerald-600" />
-                              <h5 className="text-sm font-medium">Pontos Fortes Técnicos</h5>
-                            </div>
-                            <div className="flex flex-wrap gap-1.5">
-                              {evaluation.technicalStrengths.map((strength, idx) => (
-                                <span
-                                  key={idx}
-                                  className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-md text-xs border border-emerald-300"
-                                >
-                                  {strength}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Technical Improvements */}
-                        {evaluation.technicalImprovements && evaluation.technicalImprovements.length > 0 && (
-                          <div className="mb-4">
-                            <div className="flex items-center gap-2 mb-2">
-                              <AlertTriangle className="w-4 h-4 text-amber-600" />
-                              <h5 className="text-sm font-medium">Pontos de Melhoria Técnicos</h5>
-                            </div>
-                            <div className="flex flex-wrap gap-1.5">
-                              {evaluation.technicalImprovements.map((improvement, idx) => (
-                                <span
-                                  key={idx}
-                                  className="px-2 py-1 bg-amber-100 text-amber-700 rounded-md text-xs border border-amber-300"
-                                >
-                                  {improvement}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Technical Feedback */}
-                        {evaluation.technicalFeedback && (
-                          <div>
-                            <h5 className="text-sm font-medium mb-2">Análise Técnica</h5>
-                            <div className="bg-white rounded-lg p-3 sm:p-4 border border-blue-300">
-                              <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                                {evaluation.technicalFeedback}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Behavioral Evaluation Section */}
-                    {evaluation.behavioralLeader && (
-                      <div className="bg-purple-50 rounded-xl p-4 sm:p-5 border-2 border-purple-200">
-                        <div className="flex items-center gap-2 mb-4">
-                          <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
-                            <span className="text-white text-sm">C</span>
-                          </div>
-                          <div>
-                            <h4 className="text-base sm:text-lg font-semibold">Feedback Comportamental</h4>
-                            <p className="text-xs sm:text-sm text-muted-foreground">por {evaluation.behavioralLeader}</p>
-                          </div>
-                        </div>
-
-                        {/* Behavioral Strengths */}
-                        {evaluation.behavioralStrengths && evaluation.behavioralStrengths.length > 0 && (
-                          <div className="mb-4">
-                            <div className="flex items-center gap-2 mb-2">
-                              <ThumbsUp className="w-4 h-4 text-emerald-600" />
-                              <h5 className="text-sm font-medium">Pontos Fortes Comportamentais</h5>
-                            </div>
-                            <div className="flex flex-wrap gap-1.5">
-                              {evaluation.behavioralStrengths.map((strength, idx) => (
-                                <span
-                                  key={idx}
-                                  className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-md text-xs border border-emerald-300"
-                                >
-                                  {strength}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Behavioral Improvements */}
-                        {evaluation.behavioralImprovements && evaluation.behavioralImprovements.length > 0 && (
-                          <div className="mb-4">
-                            <div className="flex items-center gap-2 mb-2">
-                              <AlertTriangle className="w-4 h-4 text-amber-600" />
-                              <h5 className="text-sm font-medium">Pontos de Melhoria Comportamentais</h5>
-                            </div>
-                            <div className="flex flex-wrap gap-1.5">
-                              {evaluation.behavioralImprovements.map((improvement, idx) => (
-                                <span
-                                  key={idx}
-                                  className="px-2 py-1 bg-amber-100 text-amber-700 rounded-md text-xs border border-amber-300"
-                                >
-                                  {improvement}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Behavioral Feedback */}
-                        {evaluation.behavioralFeedback && (
-                          <div>
-                            <h5 className="text-sm font-medium mb-2">Parecer Comportamental</h5>
-                            <div className="bg-white rounded-lg p-3 sm:p-4 border border-purple-300">
-                              <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                                {evaluation.behavioralFeedback}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {filteredEvaluations.length === 0 && (
+        {/* Evaluation List */}
+        {loading && (
+          <div className="bg-white rounded-xl border border-border p-12 text-center text-muted-foreground text-sm">
+            Carregando avaliaÃ§Ãµes...
+          </div>
+        )}
+        {!loading && filteredEvaluations.length === 0 && (
           <div className="bg-white rounded-xl border border-border p-12 text-center">
             <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="mb-2">Nenhuma avaliação encontrada</h3>
             <p className="text-muted-foreground">
-              Tente ajustar os filtros de pesquisa
+              {allEvaluations.length === 0
+                ? 'Nenhuma avaliaÃ§Ã£o final publicada ainda.'
+                : 'Nenhuma avaliaÃ§Ã£o encontrada com os filtros aplicados.'}
             </p>
           </div>
         )}
+
+        <div className="space-y-4">
+          {filteredEvaluations.map((ev) => {
+            const techAvg = averageScores(ev.technical_scores);
+            const behavAvg = averageScores(ev.behavioral_scores);
+            const isExpanded = expandedEval === ev.id;
+            return (
+              <div key={ev.id} className="bg-white rounded-xl border border-border overflow-hidden">
+                {/* Row header */}
+                <div
+                  onClick={() => setExpandedEval(isExpanded ? null : ev.id)}
+                  className="p-5 cursor-pointer hover:bg-muted/20 transition-colors"
+                >
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div className="flex-1">
+                      <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                        <h3 className="text-base font-medium">{formatPeriodLabel(ev.period)}</h3>
+                        {ev.career_recommendation && (
+                          <span className={`px-2.5 py-0.5 rounded-full text-xs border capitalize ${CAREER_COLORS[ev.career_recommendation] ?? ''}`}>
+                            {ev.career_recommendation}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <span className="text-blue-600 font-medium">{techAvg.toFixed(1)}</span>
+                          <span className="text-xs">tÃ©cnico</span>
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <span className="text-purple-600 font-medium">{behavAvg.toFixed(1)}</span>
+                          <span className="text-xs">comportamental</span>
+                        </span>
+                        {ev.published_at && (
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-3 h-3" />
+                            {new Date(ev.published_at).toLocaleDateString('pt-PT')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <button className="flex items-center gap-1 text-primary text-sm">
+                      {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      {isExpanded ? 'Ocultar' : 'Ver Detalhes'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Expanded detail */}
+                {isExpanded && (
+                  <div className="border-t border-border bg-muted/10 p-5 space-y-6">
+                    {/* Technical scores */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                        <h4 className="font-medium text-sm">CompetÃªncias TÃ©cnicas</h4>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-3">
+                        {TECHNICAL_COMPETENCIES.map((comp) => (
+                          <div key={comp} className="flex items-center justify-between gap-3 bg-blue-50 rounded-lg px-3 py-2">
+                            <span className="text-sm text-blue-900">{comp}</span>
+                            <ScoreDots value={ev.technical_scores?.[comp] ?? 0} />
+                          </div>
+                        ))}
+                      </div>
+                      {ev.technical_summary && (
+                        <div className="bg-white rounded-lg p-3 border border-blue-200">
+                          <p className="text-xs font-semibold text-blue-700 uppercase mb-1">Resumo TÃ©cnico</p>
+                          <p className="text-sm text-muted-foreground">{ev.technical_summary}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Behavioral scores */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-2.5 h-2.5 rounded-full bg-purple-500" />
+                        <h4 className="font-medium text-sm">CompetÃªncias Comportamentais</h4>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-3">
+                        {BEHAVIORAL_COMPETENCIES.map((comp) => (
+                          <div key={comp} className="flex items-center justify-between gap-3 bg-purple-50 rounded-lg px-3 py-2">
+                            <span className="text-sm text-purple-900">{comp}</span>
+                            <ScoreDots value={ev.behavioral_scores?.[comp] ?? 0} />
+                          </div>
+                        ))}
+                      </div>
+                      {ev.behavioral_summary && (
+                        <div className="bg-white rounded-lg p-3 border border-purple-200">
+                          <p className="text-xs font-semibold text-purple-700 uppercase mb-1">Resumo Comportamental</p>
+                          <p className="text-sm text-muted-foreground">{ev.behavioral_summary}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Overall recommendation */}
+                    {ev.overall_recommendation && (
+                      <div className="bg-white rounded-lg p-3 border border-border">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">RecomendaÃ§Ã£o Geral</p>
+                        <p className="text-sm text-muted-foreground">{ev.overall_recommendation}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <div className="h-12" />
       </div>
     </div>
   );

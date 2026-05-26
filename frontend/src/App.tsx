@@ -12,6 +12,9 @@ import QuestionConfiguration from './pages/QuestionConfiguration';
 import Reports from './pages/Reports';
 import AdminEmployeeList from './pages/AdminEmployeeList';
 import AdminEmployeeProfile from './pages/AdminEmployeeProfile';
+import FinalEvaluationForm from './pages/FinalEvaluationForm';
+import FinalEvaluationReview from './pages/FinalEvaluationReview';
+import AdminFinalEvaluations from './pages/AdminFinalEvaluations';
 import { PrivateRoute } from './routes/PrivateRoute';
 
 /**
@@ -47,6 +50,9 @@ function App() {
         <Route path="/admin/reports" element={<PrivateRoute allowedRoles={['admin']}><Reports /></PrivateRoute>} />
         <Route path="/admin/employees" element={<PrivateRoute allowedRoles={['admin']}><AdminEmployeeList /></PrivateRoute>} />
         <Route path="/admin/employees/:id" element={<PrivateRoute allowedRoles={['admin']}><AdminEmployeeProfile /></PrivateRoute>} />
+        <Route path="/admin/final-evaluations" element={<PrivateRoute allowedRoles={['admin']}><AdminFinalEvaluations /></PrivateRoute>} />
+        <Route path="/final-evaluation/new/:employeeId" element={<PrivateRoute allowedRoles={['technical-leader', 'behavioral-leader', 'admin']}><FinalEvaluationForm /></PrivateRoute>} />
+        <Route path="/final-evaluation/:id/review" element={<PrivateRoute allowedRoles={['technical-leader', 'behavioral-leader', 'admin']}><FinalEvaluationReview /></PrivateRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
