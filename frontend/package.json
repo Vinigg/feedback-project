@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "test:services": "node scripts/smoke-services.mjs",
+    "reset:employee-passwords": "node scripts/reset-employee-passwords.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
