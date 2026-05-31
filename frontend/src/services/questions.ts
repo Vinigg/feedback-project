@@ -6,8 +6,10 @@ export interface Question extends ServiceRecord {
   id: string;
   text: string;
   type: QuestionType;
-  role?: string;
+  role_id?: string | null;
+  role_name?: string | null;
   category: string;
+  is_active?: boolean;
   created_at?: string;
   updated_at?: string;
 }

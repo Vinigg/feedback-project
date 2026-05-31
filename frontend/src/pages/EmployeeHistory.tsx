@@ -76,9 +76,9 @@ export default function EmployeeHistory() {
             <ArrowLeft className="w-4 h-4" />
             Voltar ao Dashboard
           </button>
-          <h1 className="text-xl sm:text-2xl text-white">HistÃ³rico de AvaliaÃ§Ãµes Finais</h1>
+          <h1 className="text-xl sm:text-2xl text-white">Histórico de Avaliações Finais</h1>
           <p className="text-white/60 mt-1 text-sm">
-            Suas avaliaÃ§Ãµes oficiais de desempenho
+            Suas avaliações oficiais de desempenho
           </p>
         </div>
       </header>
@@ -96,7 +96,7 @@ export default function EmployeeHistory() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
                   type="text"
-                  placeholder="Pesquisar por perÃ­odo..."
+                  placeholder="Pesquisar por período..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -109,7 +109,7 @@ export default function EmployeeHistory() {
                   onChange={(e) => setPeriodFilter(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-border text-sm bg-white appearance-none focus:outline-none focus:ring-2 focus:ring-primary/20"
                 >
-                  <option value="">Todos os perÃ­odos</option>
+                  <option value="">Todos os períodos</option>
                   {Array.from(new Set(allEvaluations.map((e) => e.period))).map((p) => (
                     <option key={p} value={p}>{formatPeriodLabel(p)}</option>
                   ))}
@@ -118,7 +118,7 @@ export default function EmployeeHistory() {
             </div>
             <div className="mt-3 flex items-center justify-between">
               <p className="text-xs text-muted-foreground">
-                {filteredEvaluations.length} avaliaÃ§Ã£o(Ãµes) encontrada(s)
+                {filteredEvaluations.length} avaliação(ões) encontrada(s)
               </p>
               {(searchTerm || periodFilter) && (
                 <button
@@ -138,21 +138,21 @@ export default function EmployeeHistory() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           <div className="bg-white rounded-xl p-5 border border-border flex items-center justify-between">
             <div>
-              <p className="text-muted-foreground text-sm mb-1">AvaliaÃ§Ãµes Finais</p>
+              <p className="text-muted-foreground text-sm mb-1">Avaliações Finais</p>
               <p className="text-3xl">{loading ? 'â€”' : allEvaluations.length}</p>
             </div>
             <TrendingUp className="w-7 h-7 text-emerald-500" />
           </div>
           <div className="bg-white rounded-xl p-5 border border-border flex items-center justify-between">
             <div>
-              <p className="text-muted-foreground text-sm mb-1">MÃ©dia TÃ©cnica (Ãºltima)</p>
+              <p className="text-muted-foreground text-sm mb-1">Média Técnica (última)</p>
               <p className="text-3xl">{loading ? 'â€”' : latestEval ? avgTech.toFixed(1) : 'â€”'}</p>
             </div>
             <Award className="w-7 h-7 text-blue-500" />
           </div>
           <div className="bg-white rounded-xl p-5 border border-border flex items-center justify-between">
             <div>
-              <p className="text-muted-foreground text-sm mb-1">MÃ©dia Comportamental (Ãºltima)</p>
+              <p className="text-muted-foreground text-sm mb-1">Média Comportamental (última)</p>
               <p className="text-3xl">{loading ? 'â€”' : latestEval ? avgBehav.toFixed(1) : 'â€”'}</p>
             </div>
             <Star className="w-7 h-7 text-purple-500" />
@@ -162,7 +162,7 @@ export default function EmployeeHistory() {
         {/* Evaluation List */}
         {loading && (
           <div className="bg-white rounded-xl border border-border p-12 text-center text-muted-foreground text-sm">
-            Carregando avaliaÃ§Ãµes...
+            Carregando avaliações...
           </div>
         )}
         {!loading && filteredEvaluations.length === 0 && (
@@ -170,8 +170,8 @@ export default function EmployeeHistory() {
             <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-muted-foreground">
               {allEvaluations.length === 0
-                ? 'Nenhuma avaliaÃ§Ã£o final publicada ainda.'
-                : 'Nenhuma avaliaÃ§Ã£o encontrada com os filtros aplicados.'}
+                ? 'Nenhuma avaliação final publicada ainda.'
+                : 'Nenhuma avaliação encontrada com os filtros aplicados.'}
             </p>
           </div>
         )}
@@ -201,7 +201,7 @@ export default function EmployeeHistory() {
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <span className="text-blue-600 font-medium">{techAvg.toFixed(1)}</span>
-                          <span className="text-xs">tÃ©cnico</span>
+                          <span className="text-xs">técnico</span>
                         </span>
                         <span className="flex items-center gap-1">
                           <span className="text-purple-600 font-medium">{behavAvg.toFixed(1)}</span>
@@ -229,7 +229,7 @@ export default function EmployeeHistory() {
                     <div>
                       <div className="flex items-center gap-2 mb-3">
                         <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-                        <h4 className="font-medium text-sm">CompetÃªncias TÃ©cnicas</h4>
+                        <h4 className="font-medium text-sm">Competências Técnicas</h4>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-3">
                         {TECHNICAL_COMPETENCIES.map((comp) => (
@@ -241,7 +241,7 @@ export default function EmployeeHistory() {
                       </div>
                       {ev.technical_summary && (
                         <div className="bg-white rounded-lg p-3 border border-blue-200">
-                          <p className="text-xs font-semibold text-blue-700 uppercase mb-1">Resumo TÃ©cnico</p>
+                          <p className="text-xs font-semibold text-blue-700 uppercase mb-1">Resumo Técnico</p>
                           <p className="text-sm text-muted-foreground">{ev.technical_summary}</p>
                         </div>
                       )}
@@ -251,7 +251,7 @@ export default function EmployeeHistory() {
                     <div>
                       <div className="flex items-center gap-2 mb-3">
                         <div className="w-2.5 h-2.5 rounded-full bg-purple-500" />
-                        <h4 className="font-medium text-sm">CompetÃªncias Comportamentais</h4>
+                        <h4 className="font-medium text-sm">Competências Comportamentais</h4>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-3">
                         {BEHAVIORAL_COMPETENCIES.map((comp) => (
@@ -272,7 +272,7 @@ export default function EmployeeHistory() {
                     {/* Overall recommendation */}
                     {ev.overall_recommendation && (
                       <div className="bg-white rounded-lg p-3 border border-border">
-                        <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">RecomendaÃ§Ã£o Geral</p>
+                        <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Recomendação Geral</p>
                         <p className="text-sm text-muted-foreground">{ev.overall_recommendation}</p>
                       </div>
                     )}

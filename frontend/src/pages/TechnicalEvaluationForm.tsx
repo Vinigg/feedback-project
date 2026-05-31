@@ -5,14 +5,7 @@ import { useCurrentUser } from '../hooks/useCurrentUser';
 import { createEvaluation } from '../services/evaluations';
 import { getProjects } from '../services/projects';
 import { getAllProfiles } from '../services/profiles';
-
-interface MonthlyAnnotation {
-  destaqueTecnico: string;
-  pontoAtencao: string;
-  nivelEntrega: string;
-  aprendizado: string;
-  mentoria: string;
-}
+import { getQuestions, type Question } from '../services/questions';
 
 export default function TechnicalEvaluationForm() {
   const navigate = useNavigate();
@@ -21,12 +14,14 @@ export default function TechnicalEvaluationForm() {
 
   const [projectName, setProjectName] = useState<string>('');
   const [employeeName, setEmployeeName] = useState<string>('');
-  const [annotation, setAnnotation] = useState<MonthlyAnnotation>({
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [annotation, setAnnotation] = useState({
     destaqueTecnico: '',
     pontoAtencao: '',
     nivelEntrega: '',
     aprendizado: '',
-    mentoria: ''
+    mentoria: '',
   });
   const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7));
   const [files, setFiles] = useState<File[]>([]);
@@ -36,12 +31,13 @@ export default function TechnicalEvaluationForm() {
 
   useEffect(() => {
     if (!projectId || !employeeId) return;
-    Promise.all([getProjects(), getAllProfiles()])
-      .then(([projects, profiles]) => {
+    Promise.all([getProjects(), getAllProfiles(), getQuestions('technical')])
+      .then(([projects, profiles, qs]) => {
         const proj = projects.find((p) => p.id === projectId);
         if (proj) setProjectName(proj.name);
         const emp = profiles.find((p) => p.id === employeeId);
         if (emp) setEmployeeName(emp.name);
+        setQuestions(qs.filter((q) => q.is_active !== false));
       })
       .catch(console.error);
   }, [projectId, employeeId]);
@@ -63,7 +59,17 @@ export default function TechnicalEvaluationForm() {
         leader_id: userId,
         project_id: projectId,
         period: selectedMonth,
-        answers: annotation as unknown as Record<string, unknown>,
+        answers: {
+          ...annotation,
+          ...Object.fromEntries(questions.map((question) => [
+            question.id,
+            {
+              question: question.text,
+              category: question.category,
+              answer: answers[question.id] ?? '',
+            },
+          ])),
+        },
       });
       setSaved(true);
       setTimeout(() => navigate('/technical-leader'), 1500);
@@ -115,6 +121,35 @@ export default function TechnicalEvaluationForm() {
                 return <option key={value} value={value}>{label}</option>;
               })}
             </select>
+          </div>
+
+          <div className="border-t border-border" />
+
+          {/* Configured Questions */}
+          <div>
+            <h2 className="mb-6 text-foreground">Perguntas Técnicas Configuradas</h2>
+            {questions.length === 0 ? (
+              <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+                Nenhuma pergunta técnica cadastrada pelo administrador.
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {questions.map((question) => (
+                  <div key={question.id}>
+                    <label className="block mb-2 text-foreground">
+                      {question.text}
+                      <span className="text-muted-foreground text-sm ml-2">({question.category})</span>
+                    </label>
+                    <textarea
+                      value={answers[question.id] ?? ''}
+                      onChange={(e) => setAnswers({ ...answers, [question.id]: e.target.value })}
+                      placeholder="Digite a resposta para esta pergunta..."
+                      className="w-full min-h-[100px] p-3 sm:p-4 bg-input-background rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/20 resize-y text-sm sm:text-base"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="border-t border-border" />

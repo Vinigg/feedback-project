@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Edit, Trash2, Search, Code, Heart } from "lucide-react";
-import { getQuestions, createQuestion, updateQuestion, deleteQuestion, type Question } from '../services/questions';
-import { getRoles } from '../services/roles';
+import { ArrowLeft, Plus, Edit, Trash2, Search, Code, Heart, List } from "lucide-react";
+import { getQuestions, createQuestion, updateQuestion, deleteQuestion, type Question, type QuestionType } from '../services/questions';
+import { getProjectRoleNames } from '../services/projects';
 
 const technicalCategories = ['Qualidade', 'Desempenho', 'Aprendizado', 'Mentoria', 'Arquitetura'];
 const behavioralCategories = ['Comunicação', 'Proatividade', 'Colaboração', 'Iniciativa', 'Liderança'];
@@ -10,7 +10,7 @@ const behavioralCategories = ['Comunicação', 'Proatividade', 'Colaboração', 
 export default function QuestionConfiguration() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<'technical' | 'behavioral'>('technical');
+  const [activeTab, setActiveTab] = useState<'all' | QuestionType>('all');
   const [showAddModal, setShowAddModal] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [roleNames, setRoleNames] = useState<string[]>([]);
@@ -18,24 +18,44 @@ export default function QuestionConfiguration() {
   const [saving, setSaving] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
 
-  const [formData, setFormData] = useState({ text: '', role: '', category: '' });
+  const [formData, setFormData] = useState<{ text: string; roleName: string; category: string; type: QuestionType }>({
+    text: '',
+    roleName: '',
+    category: '',
+    type: 'technical',
+  });
 
   useEffect(() => {
-    Promise.all([getQuestions(), getRoles()])
+    Promise.all([getQuestions(), getProjectRoleNames()])
       .then(([qs, roles]) => {
         setQuestions(qs);
-        setRoleNames(roles.map((r) => r.name));
+        setRoleNames(roles);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
 
   const filteredQuestions = questions.filter(q =>
-    q.type === activeTab &&
+    (activeTab === 'all' || q.type === activeTab) &&
     (q.text.toLowerCase().includes(searchTerm.toLowerCase()) ||
      q.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     q.role?.toLowerCase().includes(searchTerm.toLowerCase()))
+     (q.role_name ?? '').toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  const getQuestionTheme = (type: QuestionType) =>
+    type === 'technical'
+      ? {
+          border: 'border-blue-100',
+          badge: 'bg-blue-50 text-blue-700 border-blue-200',
+          button: 'bg-blue-600 hover:bg-blue-700',
+          label: 'Técnica',
+        }
+      : {
+          border: 'border-purple-100',
+          badge: 'bg-purple-50 text-purple-700 border-purple-200',
+          button: 'bg-purple-600 hover:bg-purple-700',
+          label: 'Comportamental',
+        };
 
   const handleDelete = async (questionId: string) => {
     if (!window.confirm('Tem certeza que deseja excluir esta pergunta?')) return;
@@ -50,33 +70,36 @@ export default function QuestionConfiguration() {
 
   const handleEdit = (question: Question) => {
     setEditingQuestion(question);
-    setFormData({ text: question.text, role: question.role || '', category: question.category });
+    setFormData({ text: question.text, roleName: question.role_name || '', category: question.category, type: question.type });
     setShowAddModal(true);
   };
 
   const handleSave = async () => {
     if (!formData.text || !formData.category) return;
+    if (!editingQuestion && !window.confirm('Confirmar inclusão desta nova pergunta?')) return;
     setSaving(true);
     try {
       if (editingQuestion) {
         const updated = await updateQuestion(editingQuestion.id, {
           text: formData.text,
-          role: formData.role || undefined,
+          role_name: formData.roleName || null,
           category: formData.category,
+          type: formData.type,
         });
         setQuestions(questions.map(q => q.id === editingQuestion.id ? updated : q));
       } else {
         const created = await createQuestion({
           text: formData.text,
-          type: activeTab,
-          role: formData.role || undefined,
+          type: formData.type,
+          role_name: formData.roleName || null,
           category: formData.category,
+          is_active: true,
         });
         setQuestions([...questions, created]);
       }
       setShowAddModal(false);
       setEditingQuestion(null);
-      setFormData({ text: '', role: '', category: '' });
+      setFormData({ text: '', roleName: '', category: '', type: 'technical' });
     } catch (err) {
       console.error(err);
       alert('Erro ao salvar pergunta');
@@ -87,7 +110,7 @@ export default function QuestionConfiguration() {
 
   const openAddModal = () => {
     setEditingQuestion(null);
-    setFormData({ text: '', role: '', category: '' });
+    setFormData({ text: '', roleName: '', category: '', type: activeTab === 'behavioral' ? 'behavioral' : 'technical' });
     setShowAddModal(true);
   };
 
@@ -114,6 +137,22 @@ export default function QuestionConfiguration() {
         {/* Tabs */}
         <div className="bg-white rounded-xl border border-border mb-6 overflow-hidden">
           <div className="flex">
+            <button
+              onClick={() => setActiveTab('all')}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 sm:px-6 py-3 sm:py-4 transition-colors ${
+                activeTab === 'all'
+                  ? 'bg-slate-50 text-slate-800 border-b-2 border-slate-500'
+                  : 'bg-white text-muted-foreground hover:bg-muted/30'
+              }`}
+            >
+              <List className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="text-sm sm:text-base">Todas</span>
+              <span className={`px-2 py-0.5 rounded-full text-xs ${
+                activeTab === 'all' ? 'bg-slate-100 text-slate-800' : 'bg-muted text-muted-foreground'
+              }`}>
+                {questions.length}
+              </span>
+            </button>
             <button
               onClick={() => setActiveTab('technical')}
               className={`flex-1 flex items-center justify-center gap-2 px-4 sm:px-6 py-3 sm:py-4 transition-colors ${
@@ -164,9 +203,7 @@ export default function QuestionConfiguration() {
             </div>
             <button
               onClick={openAddModal}
-              className={`w-full sm:w-auto flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 text-white rounded-lg hover:opacity-90 transition-colors ${
-                activeTab === 'technical' ? 'bg-blue-600' : 'bg-purple-600'
-              }`}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 text-white rounded-lg hover:opacity-90 transition-colors bg-primary"
             >
               <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
               <span>Nova Pergunta</span>
@@ -176,27 +213,27 @@ export default function QuestionConfiguration() {
 
         {/* Questions List */}
         <div className="space-y-4">
-          {filteredQuestions.map((question) => (
-            <div key={question.id} className={`bg-white rounded-xl border-2 p-4 sm:p-6 hover:shadow-md transition-shadow ${
-              activeTab === 'technical' ? 'border-blue-100' : 'border-purple-100'
-            }`}>
+          {filteredQuestions.map((question) => {
+            const theme = getQuestionTheme(question.type);
+
+            return (
+            <div key={question.id} className={`bg-white rounded-xl border-2 p-4 sm:p-6 hover:shadow-md transition-shadow ${theme.border}`}>
               <div className="flex flex-col gap-4">
                 <div className="flex-1">
                   <p className="text-sm sm:text-base mb-3">{question.text}</p>
                   <div className="flex flex-wrap gap-2">
-                    <span className={`px-3 py-1 rounded-full border text-xs sm:text-sm ${
-                      activeTab === 'technical'
-                        ? 'bg-blue-50 text-blue-700 border-blue-200'
-                        : 'bg-purple-50 text-purple-700 border-purple-200'
-                    }`}>
+                    <span className={`px-3 py-1 rounded-full border text-xs sm:text-sm ${theme.badge}`}>
+                      {theme.label}
+                    </span>
+                    <span className={`px-3 py-1 rounded-full border text-xs sm:text-sm ${theme.badge}`}>
                       {question.category}
                     </span>
-                    {question.role && (
+                    {question.role_name && (
                       <span className="px-3 py-1 bg-slate-50 text-slate-700 rounded-full border border-slate-200 text-xs sm:text-sm">
-                        {question.role}
+                        {question.role_name}
                       </span>
                     )}
-                    {!question.role && (
+                    {!question.role_name && (
                       <span className="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200 text-xs sm:text-sm">
                         Todos os cargos
                       </span>
@@ -221,7 +258,7 @@ export default function QuestionConfiguration() {
                 </div>
               </div>
             </div>
-          ))}
+          )})}
 
           {loading && (
             <div className="bg-white rounded-xl border border-border p-12 text-center">
@@ -242,9 +279,20 @@ export default function QuestionConfiguration() {
           <div className="bg-white rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-medium mb-4">
               {editingQuestion ? 'Editar Pergunta' : 'Nova Pergunta'}
-              {activeTab === 'technical' ? ' Técnica' : ' Comportamental'}
+              {formData.type === 'technical' ? ' Técnica' : ' Comportamental'}
             </h3>
             <div className="space-y-4">
+              <div>
+                <label className="block text-sm mb-2">Tipo</label>
+                <select
+                  value={formData.type}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value as QuestionType, category: '' })}
+                  className="w-full px-4 py-2 bg-input-background rounded-lg border border-border text-sm"
+                >
+                  <option value="technical">Técnica</option>
+                  <option value="behavioral">Comportamental</option>
+                </select>
+              </div>
               <div>
                 <label className="block text-sm mb-2">Texto da Pergunta</label>
                 <textarea
@@ -262,7 +310,7 @@ export default function QuestionConfiguration() {
                   className="w-full px-4 py-2 bg-input-background rounded-lg border border-border text-sm"
                 >
                   <option value="">Selecione uma categoria</option>
-                  {(activeTab === 'technical' ? technicalCategories : behavioralCategories).map(cat => (
+                  {(formData.type === 'technical' ? technicalCategories : behavioralCategories).map(cat => (
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </select>
@@ -272,8 +320,8 @@ export default function QuestionConfiguration() {
                   Cargo Específico <span className="text-muted-foreground">(opcional)</span>
                 </label>
                 <select
-                  value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                  value={formData.roleName}
+                  onChange={(e) => setFormData({ ...formData, roleName: e.target.value })}
                   className="w-full px-4 py-2 bg-input-background rounded-lg border border-border text-sm"
                 >
                   <option value="">Todos os cargos</option>
@@ -290,7 +338,7 @@ export default function QuestionConfiguration() {
                   onClick={() => {
                     setShowAddModal(false);
                     setEditingQuestion(null);
-                    setFormData({ text: '', role: '', category: '' });
+                    setFormData({ text: '', roleName: '', category: '', type: 'technical' });
                   }}
                   className="flex-1 px-4 py-2 bg-secondary text-secondary-foreground rounded-lg"
                 >
@@ -299,9 +347,7 @@ export default function QuestionConfiguration() {
                 <button
                   onClick={handleSave}
                   disabled={saving || !formData.text || !formData.category}
-                  className={`flex-1 px-4 py-2 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed ${
-                    activeTab === 'technical' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-purple-600 hover:bg-purple-700'
-                  }`}
+                  className={`flex-1 px-4 py-2 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed ${getQuestionTheme(formData.type).button}`}
                 >
                   {saving ? 'Salvando...' : editingQuestion ? 'Atualizar' : 'Salvar'}
                 </button>

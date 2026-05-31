@@ -37,6 +37,31 @@ export async function getProjectMembers(projectId: string): Promise<ProjectMembe
   return requireData(data as ProjectMember[] | null, error);
 }
 
+export async function getProjectRoleNames(): Promise<string[]> {
+  const client = getSupabaseClient();
+  const [rolesResponse, membersResponse] = await Promise.all([
+    client.from('roles').select('name').order('name', { ascending: true }),
+    client
+      .from('project_members')
+      .select('role_in_project')
+      .not('role_in_project', 'is', null)
+      .order('role_in_project', { ascending: true }),
+  ]);
+
+  const roles = requireData(rolesResponse.data as { name: string | null }[] | null, rolesResponse.error);
+  const members = requireData(
+    membersResponse.data as { role_in_project: string | null }[] | null,
+    membersResponse.error,
+  );
+
+  return Array.from(
+    new Set([
+      ...roles.map((row) => row.name?.trim()).filter((role): role is string => Boolean(role)),
+      ...members.map((row) => row.role_in_project?.trim()).filter((role): role is string => Boolean(role)),
+    ]),
+  ).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+}
+
 export async function getMyProjects(userId: string): Promise<Project[]> {
   const client = getSupabaseClient();
   const { data, error } = await client
