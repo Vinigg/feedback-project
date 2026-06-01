@@ -45,3 +45,40 @@ O fluxo e a interface do sistema foram desenvolvidos com foco em usabilidade e r
 ---
 
 **Nota:** Este repositório é fruto de um desafio real de mercado, unindo teoria acadêmica e prática profissional na área de Análise e Desenvolvimento de Sistemas.
+
+## Entrega final AI-Powered
+
+Os documentos principais da entrega final estao organizados em:
+
+*   **ENTREGA_FINAL_MVP_AI_POWERED.md:** checklist da entrega solicitada pela residencia.
+*   **docs/AI_INTEGRATIONS_AND_PROMPTS.md:** integracao Gemini, contexto de uso, prompt principal e contrato de resposta.
+*   **docs/DEPLOYMENT_GUIDE.md:** guia de implantacao local/producao e variaveis de ambiente.
+*   **docs/PROMPT_FAILURE_EXAMPLES.md:** exemplos de prompts que falharam e ajustes aplicados.
+
+### Rodando o projeto
+
+Configure `frontend/.env`:
+
+```env
+VITE_SUPABASE_URL=https://seu-projeto.supabase.co
+VITE_SUPABASE_ANON_KEY=sua-chave-anon-publica
+VITE_BACKEND_URL=http://localhost:3000
+```
+
+Configure `backend/.env`:
+
+```env
+GEMINI_API_KEY=sua-chave-gemini
+GEMINI_MODEL=gemini-2.5-flash
+PORT=3000
+```
+
+Instale dependencias e rode o projeto:
+
+```bash
+npm install
+npm run dev
+```
+
+Frontend: `http://localhost:5173`
+Backend: `http://localhost:3000`
