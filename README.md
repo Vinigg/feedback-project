@@ -57,7 +57,13 @@ Os documentos principais da entrega final estao organizados em:
 
 ### Rodando o projeto
 
-Configure `frontend/.env`:
+> **Primeira vez?** Se você nunca rodou este projeto antes, siga o guia completo em **[docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md)**. Ele explica desde a instalação do Node.js até a publicação em produção.
+
+**Pré-requisitos:** Node.js 18+ instalado ([baixe aqui](https://nodejs.org)).
+
+**Configuração rápida** (para quem já tem o ambiente pronto):
+
+1. Configure `frontend/.env` (use `frontend/.env.example` como base):
 
 ```env
 VITE_SUPABASE_URL=https://seu-projeto.supabase.co
@@ -65,7 +71,7 @@ VITE_SUPABASE_ANON_KEY=sua-chave-anon-publica
 VITE_BACKEND_URL=http://localhost:3000
 ```
 
-Configure `backend/.env`:
+2. Configure `backend/.env` (use `backend/.env.example` como base):
 
 ```env
 GEMINI_API_KEY=sua-chave-gemini
@@ -73,7 +79,7 @@ GEMINI_MODEL=gemini-2.5-flash
 PORT=3000
 ```
 
-Instale dependencias e rode o projeto:
+3. Instale dependências e rode o projeto:
 
 ```bash
 npm install

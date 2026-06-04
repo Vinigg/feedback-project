@@ -2,6 +2,8 @@
 
 Este guia explica como configurar o Supabase para autenticação real no frontend.
 
+> **O que é o Supabase?** É um serviço online gratuito que funciona como banco de dados e sistema de login para o seu projeto. Você não precisa instalar nada no seu computador — tudo funciona pela internet.
+
 ## 1. Criar o projeto no Supabase
 
 1. Acesse https://supabase.com.
@@ -29,22 +31,31 @@ No painel do Supabase:
 
 ## 3. Configurar `frontend/.env`
 
-Crie o arquivo `frontend/.env` baseado em `frontend/.env.example`:
+O projeto já inclui o arquivo `frontend/.env.example` com o formato correto. Para criar sua configuração:
+
+1. Copie o arquivo `frontend/.env.example` e renomeie a cópia para `.env` (dentro da mesma pasta `frontend`).
+2. Abra o `.env` em um editor de texto (VS Code, Notepad++, etc. — **não** use o Word).
+3. Substitua os valores de exemplo pelos seus valores reais:
 
 ```env
 VITE_SUPABASE_URL=https://seu-projeto.supabase.co
 VITE_SUPABASE_ANON_KEY=sua-anon-key
 ```
 
-Depois de alterar variáveis de ambiente do Vite, reinicie o servidor de desenvolvimento.
+Depois de alterar variáveis de ambiente do Vite, reinicie o servidor de desenvolvimento:
+- Vá ao terminal onde o servidor está rodando.
+- Pressione **Ctrl + C** para parar o servidor.
+- Digite `npm run dev` e pressione Enter para reiniciar.
 
 ## 4. Criar tabela `profiles`
 
+Esta tabela armazena as informações de perfil de cada usuário (nome, e-mail e cargo/role).
+
 No Supabase:
 
-1. Abra **SQL Editor**.
-2. Crie uma nova query.
-3. Execute o SQL abaixo.
+1. Abra **SQL Editor** (no menu lateral esquerdo, é o ícone com símbolo de código `>_`).
+2. Crie uma nova query (clique em **New query**).
+3. Copie **todo** o SQL abaixo e cole no editor. Depois clique em **Run** (botão verde no canto inferior direito).
 
 ```sql
 create table public.profiles (
@@ -58,13 +69,25 @@ create table public.profiles (
 );
 ```
 
+> **O que esse SQL faz:** Cria uma tabela chamada `profiles` que guarda o ID do usuário (ligado ao sistema de login), nome, e-mail e cargo. Se um usuário for deletado do login, o perfil dele também é removido automaticamente (`on delete cascade`).
+
 ## 5. Ativar Row Level Security
+
+Row Level Security (RLS) é uma proteção do banco de dados que impede que um usuário acesse dados de outro. **É obrigatório ativá-lo.**
+
+No SQL Editor, execute:
 
 ```sql
 alter table public.profiles enable row level security;
 ```
 
+> Após ativar o RLS, ninguém consegue ler dados da tabela até que você crie "políticas" (rules) dizendo quem pode ver o quê. É isso que faremos nos passos 6 e 7.
+
 ## 6. Policy para usuário ler o próprio perfil
+
+Esta regra permite que cada usuário veja **apenas o próprio perfil** (nome, e-mail, cargo). Ele não consegue ver dados de outras pessoas.
+
+No SQL Editor, execute:
 
 ```sql
 create policy "Users can read own profile"
@@ -74,6 +97,10 @@ using (auth.uid() = id);
 ```
 
 ## 7. Policy para admin ler todos os perfis
+
+Esta regra permite que usuários com cargo `admin` vejam **todos** os perfis. Isso é necessário para o administrador gerenciar os funcionários.
+
+No SQL Editor, execute:
 
 ```sql
 create policy "Admins can read all profiles"
@@ -167,16 +194,16 @@ Essas roles controlam o redirecionamento após login:
 - `behavioral-leader` -> `/behavioral-leader`
 - `employee` -> `/employee`
 
-## 12. Protecao por role no frontend
+## 12. Proteção por role no frontend
 
-O frontend usa `profiles.role` para duas decisoes:
+O frontend usa `profiles.role` para duas decisões:
 
-- Redirecionar o usuario depois do login.
-- Autorizar ou bloquear o acesso as rotas privadas.
+- Redirecionar o usuário depois do login.
+- Autorizar ou bloquear o acesso às rotas privadas.
 
-O Supabase Auth gerencia a sessao do usuario. O access token nao deve ser salvo manualmente em `localStorage`; a aplicacao deve usar a sessao mantida pelo Supabase.
+O Supabase Auth gerencia a sessão do usuário automaticamente. Você **não** precisa salvar tokens ou senhas manualmente no código — o Supabase cuida disso.
 
-As permissoes de rota no frontend seguem esta regra:
+As permissões de rota no frontend seguem esta regra:
 
 - `admin`: acessa as rotas de admin, como `/admin`, `/admin/roles`, `/admin/questions` e `/admin/reports`.
 - `technical-leader`: acessa as rotas tecnicas, como `/technical-leader` e `/technical-leader/evaluate/:projectId/:employeeId`.
@@ -185,11 +212,11 @@ As permissoes de rota no frontend seguem esta regra:
 
 A protecao no frontend melhora a experiencia e evita navegacao indevida, mas nao substitui seguranca no banco. Row Level Security (RLS) continua obrigatorio no Supabase para proteger dados, queries e operacoes diretamente na base.
 
-## 13. Testar login, logout e protecao de rotas
+## 13. Testar login, logout e proteção de rotas
 
-1. Configure `frontend/.env`.
-2. Reinicie o servidor Vite.
-3. Abra a aplicação.
+1. Configure `frontend/.env` (veja passo 3).
+2. Reinicie o servidor Vite: no terminal, pressione **Ctrl + C** para parar, depois digite `npm run dev` e pressione Enter.
+3. Abra a aplicação no navegador (geralmente http://localhost:5173).
 4. Faça login com o e-mail e senha criados em **Authentication > Users**.
 5. Confirme se o usuário é redirecionado para a rota correta conforme a role em `profiles`.
 6. Clique em **Sair** em um dashboard.

@@ -4,6 +4,34 @@ Este guia detalha todos os passos necessários para configurar, rodar localmente
 
 ---
 
+## Glossário rápido
+
+Antes de começar, entenda alguns termos que aparecem neste guia:
+
+| Termo | O que significa |
+|-------|----------------|
+| **Terminal** | Programa onde você digita comandos de texto. No Windows, pode ser o PowerShell ou o Prompt de Comando (CMD). |
+| **Variável de ambiente** | Configuração salva em um arquivo (`.env`) que o programa lê ao iniciar. Funciona como um "ajuste" que você define sem alterar o código. |
+| **Dependência** | Biblioteca ou pacote que o projeto precisa para funcionar. São baixados automaticamente pelo `npm install`. |
+| **Build** | Processo de transformar o código-fonte em uma versão otimizada para produção (publicação). |
+| **Repositório** | Pasta do projeto versionada com Git. Contém todo o histórico de alterações. |
+
+---
+
+## Como abrir o terminal no Windows
+
+Você precisará do terminal em vários passos deste guia. Para abri-lo:
+
+1. Pressione as teclas **Windows + R** ao mesmo tempo.
+2. Digite `powershell` e pressione **Enter**.
+3. Uma janela azul/preta aparecerá — esse é o terminal.
+
+**Alternativa:** Clique no botão Iniciar, digite "PowerShell" na busca e clique no resultado.
+
+> **Dica:** Se você usa o VS Code (editor de código recomendado), pode abrir o terminal integrado com o atalho **Ctrl + `** (crase).
+
+---
+
 ## 1. Pré-requisitos — O que instalar antes
 
 ### 1.1 Node.js e npm
@@ -13,14 +41,14 @@ O projeto precisa do Node.js (versão 18 ou superior) para funcionar. O npm (ger
 1. Acesse https://nodejs.org
 2. Baixe a versão **LTS** (recomendada).
 3. Execute o instalador e siga os passos padrão (pode clicar "Next" em tudo).
-4. Após instalar, abra um terminal (PowerShell ou CMD) e verifique:
+4. Após instalar, abra o terminal (veja a seção "Como abrir o terminal no Windows" acima) e digite os comandos abaixo, pressionando **Enter** após cada um:
 
 ```bash
 node --version
 npm --version
 ```
 
-Se ambos mostrarem um número de versão, a instalação foi bem-sucedida.
+Se ambos mostrarem um número de versão (ex: `v18.17.0` e `9.6.7`), a instalação foi bem-sucedida.
 
 ### 1.2 Git (opcional, mas recomendado)
 
@@ -43,7 +71,11 @@ git clone <URL-DO-REPOSITORIO>
 cd feedback-project
 ```
 
-Se você recebeu o código como arquivo ZIP, extraia-o e abra a pasta no terminal.
+> **O que é `cd`?** O comando `cd` ("change directory") serve para entrar em uma pasta pelo terminal. Exemplo: `cd feedback-project` entra na pasta chamada "feedback-project". Para voltar uma pasta acima, use `cd ..`
+
+Se você recebeu o código como arquivo ZIP, extraia-o e abra a pasta no terminal. Para isso:
+1. Extraia o ZIP (clique com botão direito > "Extrair aqui").
+2. No terminal, navegue até a pasta extraída: `cd C:\caminho\para\feedback-project`
 
 ---
 
@@ -82,18 +114,20 @@ O Supabase é o banco de dados e sistema de autenticação do projeto. Ele é gr
 1. No Supabase, vá em **Authentication** > **Users**.
 2. Clique em **Add user** > **Create new user**.
 3. Informe e-mail e senha (ex: `admin@empresa.com` / `senha123`).
-4. Copie o **User UID** gerado.
-5. No **SQL Editor**, insira o perfil desse usuário:
+4. Copie o **User UID** gerado (é um código longo parecido com: `a1b2c3d4-e5f6-7890-abcd-ef1234567890`).
+5. No **SQL Editor**, insira o perfil desse usuário (substituindo o UID de exemplo pelo que você copiou):
 
 ```sql
 INSERT INTO public.profiles (id, name, email, role)
 VALUES (
-  'COLE-O-USER-UID-AQUI',
+  'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
   'Administrador',
   'admin@empresa.com',
   'admin'
 );
 ```
+
+> **Atenção:** Mantenha as aspas simples ao redor do UID. Substitua apenas o texto entre elas pelo UID real que você copiou.
 
 Repita o processo para criar líderes e colaboradores, alterando o `role` para: `technical-leader`, `behavioral-leader` ou `employee`.
 
@@ -117,7 +151,17 @@ A IA é usada para gerar insights nas avaliações finais dos colaboradores.
 
 ### 4.1 Frontend
 
-Crie o arquivo `frontend/.env` com o seguinte conteúdo:
+O projeto já inclui um arquivo de exemplo em `frontend/.env.example`. Você precisa criar uma cópia chamada `.env` com seus valores reais.
+
+**Como criar o arquivo `.env`:**
+
+1. Abra o VS Code (ou outro editor de texto — **não** use o Word).
+2. Vá em **Arquivo** > **Abrir Pasta** e abra a pasta `frontend`.
+3. Crie um novo arquivo: **Arquivo** > **Novo Arquivo**.
+4. Cole o conteúdo abaixo.
+5. Salve como `.env` (Arquivo > Salvar Como, e digite exatamente `.env` como nome).
+
+> **Importante:** O nome do arquivo é literalmente `.env` (começa com ponto e não tem extensão como `.txt`). Se o Windows adicionar `.txt` automaticamente, renomeie o arquivo pelo terminal: `ren .env.txt .env`
 
 ```env
 VITE_SUPABASE_URL=https://seu-projeto.supabase.co
@@ -131,7 +175,9 @@ Substitua pelos valores reais obtidos no passo 2.2.
 
 ### 4.2 Backend
 
-Crie o arquivo `backend/.env` com o seguinte conteúdo:
+Repita o processo acima para criar o arquivo `backend/.env` (dentro da pasta `backend`).
+
+O projeto também inclui `backend/.env.example` como referência. Crie o `.env` com o seguinte conteúdo:
 
 ```env
 GEMINI_API_KEY=sua-chave-gemini
@@ -145,7 +191,9 @@ Substitua `sua-chave-gemini` pela chave obtida no passo 3.
 
 ## 5. Instalação das dependências
 
-Abra um terminal na pasta raiz do projeto e execute os comandos abaixo **na ordem**:
+Abra um terminal na **pasta raiz** do projeto (a pasta principal chamada `feedback-project`, não as subpastas `frontend` ou `backend`). Para confirmar que você está no lugar certo, digite `dir` e verifique se aparecem as pastas `frontend` e `backend`.
+
+Execute os comandos abaixo **na ordem**, pressionando Enter após cada um e aguardando a conclusão antes de digitar o próximo:
 
 ```bash
 npm install
@@ -157,13 +205,15 @@ npm install
 cd ..
 ```
 
+> **Lembrete:** `cd frontend` entra na pasta frontend. `cd ..` volta para a pasta anterior (raiz).
+
 ```bash
 cd backend
 npm install
 cd ..
 ```
 
-**Validação:** Se não apareceram erros vermelhos, as dependências foram instaladas corretamente. Avisos amarelos ("warn") podem ser ignorados.
+**Validação:** Se não apareceram erros vermelhos, as dependências foram instaladas corretamente. Avisos amarelos ("warn") podem ser ignorados com segurança.
 
 ---
 
@@ -171,13 +221,13 @@ cd ..
 
 ### Opção A — Comando único (recomendado)
 
-Na raiz do projeto:
+Certifique-se de que o terminal está na **pasta raiz** do projeto (onde estão as pastas `frontend` e `backend`). Se você seguiu o passo 5, já deve estar lá. Caso contrário, navegue até ela com `cd C:\caminho\para\feedback-project`.
 
 ```bash
 npm run dev
 ```
 
-Isso inicia o frontend e o backend simultaneamente.
+Isso inicia o frontend e o backend simultaneamente. Você verá várias mensagens no terminal — isso é normal.
 
 ### Opção B — Terminais separados
 
@@ -279,9 +329,9 @@ O backend precisa dos scripts `build` e `start` no `backend/package.json` para f
 
 ## 8. Configuração de CORS para produção
 
-O backend atual aceita requisições de qualquer origem (`cors()` sem opções). Para produção, é recomendado restringir ao domínio do frontend.
+O backend atual aceita requisições de qualquer origem (`cors()` sem opções). Para produção, é recomendado restringir ao domínio do frontend. Isso impede que sites desconhecidos acessem seu backend.
 
-No arquivo `backend/src/app.ts`, altere:
+No arquivo `backend/src/app.ts`, altere a linha:
 
 ```typescript
 app.use(cors());
@@ -295,7 +345,14 @@ app.use(cors({
 }));
 ```
 
-E adicione no `backend/.env` de produção:
+**Como fazer essa alteração:**
+1. Abra o arquivo `backend/src/app.ts` no VS Code (ou outro editor de código).
+2. Use **Ctrl + H** (Localizar e Substituir).
+3. No campo "Localizar", cole: `app.use(cors());`
+4. No campo "Substituir", cole: `app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));`
+5. Clique em "Substituir" e salve o arquivo (**Ctrl + S**).
+
+E adicione no `backend/.env` de produção (a mesma que você criou no passo 4.2, mas agora com a linha extra):
 
 ```env
 FRONTEND_URL=https://seu-app.vercel.app
