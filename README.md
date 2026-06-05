@@ -6,15 +6,15 @@ Este projeto foi desenvolvido como parte da **Residência Tecnológica do Progra
 O sistema visa eliminar a subjetividade nas avaliações tradicionais. Através de interfaces segmentadas, líderes técnicos e comportamentais realizam registros mensais de pontos positivos e de atenção, que culminam em uma nota consolidada a cada seis meses, com peso equilibrado (50% técnica / 50% comportamental).
 
 ## 👥 Equipe de Desenvolvimento
-*   Pedro Pessoa de Albuquerque Neto
-*   Roberto Henrique Cavalcanti Freitas
-*   Saulo Eduardo Almeida dos Santos
-*   Thayna Verçosa de Andrade
-*   Thiago Cardozo da Conceição
+*   [Pedro Pessoa de Albuquerque Neto](https://github.com/Ppan-droid)
+*   [Roberto Henrique Cavalcanti Freitas](https://github.com/Roberto-Cavalcanti)
+*   [Saulo Eduardo Almeida dos Santos](https://github.com/Saulo1Almeida)
+*   [Thayna Verçosa de Andrade](https://github.com/thaynavercosa)
+*   [Thiago Cardozo da Conceição](https://github.com/thcardozo)
 *   [Vinícius Pessoa de Albuquerque](https://github.com/Vini-palb)
 *   [Vinícius Wagner Gomes Germano](https://github.com/Vinigg)
-*   Vitória Gabrielly Gomes da Silva
-*   Wesley Yuri da Silva
+*   [Vitória Gabrielly Gomes da Silva](https://github.com/Vitoria-Gabrielly-DEV)
+*   [Wesley Yuri da Silva](https://github.com/wesleysilva77)
 *   [Yasmin Karolina Silva de Moura Godinho](https://github.com/Yasmink-godinho)
 
 ## 👤 Perfis de Usuário e Funcionalidades
