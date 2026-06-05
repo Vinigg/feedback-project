@@ -92,44 +92,57 @@ O Supabase é o banco de dados e sistema de autenticação do projeto. Ele é gr
 
 ### 2.2 Obter as chaves do projeto
 
-1. No painel do Supabase, vá em **Project Settings** > **API**.
-2. Copie:
+1. No painel do Supabase, vá em **Project Overview**.
+2. Abaixo do nome do projeto terá a URL, clique em **copy** :
    - **Project URL** → será o `VITE_SUPABASE_URL`
-   - **anon public key** → será o `VITE_SUPABASE_ANON_KEY`
 
-### 2.3 Criar as tabelas
+1. No painel do Supabase, vá em **Project Settings** > **API Keys** > Aba **Legacy anon, service_role API keys**.
+2. Copie:
+   - **anon public** → será o `VITE_SUPABASE_ANON_KEY`
+
+### 2.3 Criar as tabelas e popular com dados
+
+O projeto possui **dois scripts SQL** na raiz do projeto. Execute-os **nesta ordem**:
+
+#### Script 1: Estrutura do banco (`setup_database.sql`)
 
 1. No Supabase, abra **SQL Editor** (menu lateral esquerdo).
 2. Clique em **New query**.
-3. Siga as instruções do arquivo `SUPABASE_SETUP.md` (na raiz do projeto) para criar a tabela `profiles` e configurar as políticas de segurança (RLS).
-4. Após isso, execute os seguintes arquivos SQL **nesta ordem** (copie o conteúdo de cada arquivo e cole no SQL Editor):
-   - `final_evaluations_migration.sql`
-   - `add_question_role_name.sql`
-   - `fix_supabase_public_permissions.sql` (somente se houver erros de permissão)
+3. Abra o arquivo `setup_database.sql` (está na pasta principal do projeto) em um editor de texto.
+4. Copie **todo** o conteúdo do arquivo e cole no SQL Editor do Supabase.
+5. Clique no botão verde **Run**.
+6. Se aparecer "Success. No rows returned", todas as tabelas foram criadas!
 
-**Validação:** No menu lateral do Supabase, abra **Table Editor**. Você deve ver as tabelas: `profiles`, `roles`, `questions`, `projects`, `evaluations` e `final_evaluations`.
+**Validação:** No menu lateral do Supabase, abra **Table Editor**. Você deve ver as tabelas: `profiles`, `roles`, `questions`, `projects`, `project_members`, `evaluations` e `final_evaluations`.
 
-### 2.4 Criar o primeiro usuário (admin)
+#### Script 2: Dados de demonstração (`seed_demo_data.sql`)
 
-1. No Supabase, vá em **Authentication** > **Users**.
-2. Clique em **Add user** > **Create new user**.
-3. Informe e-mail e senha (ex: `admin@empresa.com` / `senha123`).
-4. Copie o **User UID** gerado (é um código longo parecido com: `a1b2c3d4-e5f6-7890-abcd-ef1234567890`).
-5. No **SQL Editor**, insira o perfil desse usuário (substituindo o UID de exemplo pelo que você copiou):
+1. No SQL Editor, clique em **New query** (uma nova query, não a mesma).
+2. Abra o arquivo `seed_demo_data.sql` (também na raiz do projeto).
+3. Copie **todo** o conteúdo e cole no SQL Editor.
+4. Clique em **Run**.
 
-```sql
-INSERT INTO public.profiles (id, name, email, role)
-VALUES (
-  'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-  'Administrador',
-  'admin@empresa.com',
-  'admin'
-);
-```
+Esse script cria **automaticamente** todos os usuários de teste, cargos, projetos e vínculos. **Você NÃO precisa criar usuários manualmente na aba Authentication > Users do Supabase** — o script já faz isso via SQL (insere em `auth.users` e `auth.identities` diretamente).
 
-> **Atenção:** Mantenha as aspas simples ao redor do UID. Substitua apenas o texto entre elas pelo UID real que você copiou.
+Após executar, os seguintes usuários estarão disponíveis para login:
 
-Repita o processo para criar líderes e colaboradores, alterando o `role` para: `technical-leader`, `behavioral-leader` ou `employee`.
+| Usuário | E-mail | Senha | Cargo |
+|---------|--------|-------|-------|
+| Administrador | admin@empresa.com | Empresa@2026 | admin |
+| Líder Técnico | tech@empresa.com | Empresa@2026 | technical-leader |
+| Líder Comportamental | rh@empresa.com | Empresa@2026 | behavioral-leader |
+| Colaborador | colaborador@empresa.com | Empresa@2026 | employee |
+| Ana Silva | ana.silva@empresa.com | Empresa@2026 | employee |
+| Carlos Mendes | carlos.mendes@empresa.com | Empresa@2026 | employee |
+| Julia Costa | julia.costa@empresa.com | Empresa@2026 | employee |
+| Pedro Alves | pedro.alves@empresa.com | Empresa@2026 | employee |
+| Mariana Lima | mariana.lima@empresa.com | Empresa@2026 | employee |
+| Roberto Santos | roberto.santos@empresa.com | Empresa@2026 | employee |
+| Lucia Ferreira | lucia.ferreira@empresa.com | Empresa@2026 | employee |
+
+**Validação:** Em **Authentication > Users**, devem aparecer os 11 usuários criados.
+
+> **Para explicações detalhadas** de cada parte do SQL, consulte [SUPABASE_SETUP.md](./SUPABASE_SETUP.md).
 
 ---
 
@@ -257,7 +270,7 @@ npm run dev
 
 1. Abra http://localhost:3000/health no navegador. Deve mostrar: `{"status":"ok"}`
 2. Abra http://localhost:5173 no navegador. Deve aparecer a tela de login.
-3. Faça login com o usuário admin criado no passo 2.4. Você deve ser redirecionado para o painel administrativo.
+3. Faça login com o usuário admin (`admin@empresa.com` / `Empresa@2026`). Você deve ser redirecionado para o painel administrativo.
 
 ---
 
@@ -384,8 +397,8 @@ Após a publicação, verifique cada item:
 |----------|---------------|---------|
 | `npm run dev` falha com "concurrently not found" | Dependências da raiz não instaladas | Execute `npm install` na raiz do projeto |
 | Tela branca no frontend | Variáveis VITE_ não configuradas | Verifique se `frontend/.env` existe e reinicie o dev server |
-| Erro 401 no login | Usuário não criado no Supabase Auth | Crie o usuário em Authentication > Users |
-| Login funciona mas redireciona para 404 | Perfil não inserido na tabela `profiles` | Insira o registro com o role correto (passo 2.4) |
+| Erro 401 no login | Script `seed_demo_data.sql` não foi executado | Execute o script no SQL Editor (passo 2.3). Ele cria os usuários automaticamente — não é necessário criar manualmente em Authentication > Users |
+| Login funciona mas redireciona para 404 | Perfil não inserido na tabela `profiles` | Execute o `seed_demo_data.sql` no SQL Editor (passo 2.3) |
 | "GEMINI_API_KEY não configurada" | Arquivo `backend/.env` ausente ou incorreto | Verifique se `backend/.env` existe com a chave correta |
 | Erro de CORS no navegador | Backend não permite a origem do frontend | Configure a variável `FRONTEND_URL` (passo 8) |
 | Build do backend falha | TypeScript não compila | Execute `cd backend && npx tsc` para ver os erros detalhados |

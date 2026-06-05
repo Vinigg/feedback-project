@@ -63,7 +63,11 @@ Os documentos principais da entrega final estao organizados em:
 
 **Configuração rápida** (para quem já tem o ambiente pronto):
 
-1. Configure `frontend/.env` (use `frontend/.env.example` como base):
+1. No Supabase, execute no SQL Editor (nesta ordem):
+   - `setup_database.sql` → cria tabelas e regras de segurança
+   - `seed_demo_data.sql` → cria usuários de teste e dados de demonstração
+
+2. Configure `frontend/.env` (use `frontend/.env.example` como base):
 
 ```env
 VITE_SUPABASE_URL=https://seu-projeto.supabase.co
@@ -71,7 +75,7 @@ VITE_SUPABASE_ANON_KEY=sua-chave-anon-publica
 VITE_BACKEND_URL=http://localhost:3000
 ```
 
-2. Configure `backend/.env` (use `backend/.env.example` como base):
+3. Configure `backend/.env` (use `backend/.env.example` como base):
 
 ```env
 GEMINI_API_KEY=sua-chave-gemini
@@ -79,12 +83,14 @@ GEMINI_MODEL=gemini-2.5-flash
 PORT=3000
 ```
 
-3. Instale dependências e rode o projeto:
+4. Instale dependências e rode o projeto:
 
 ```bash
 npm install
 npm run dev
 ```
+
+5. Faça login com `admin@empresa.com` / `Empresa@2026`
 
 Frontend: `http://localhost:5173`
 Backend: `http://localhost:3000`

@@ -4,6 +4,8 @@ Este guia explica como configurar o Supabase para autenticação real no fronten
 
 > **O que é o Supabase?** É um serviço online gratuito que funciona como banco de dados e sistema de login para o seu projeto. Você não precisa instalar nada no seu computador — tudo funciona pela internet.
 
+---
+
 ## 1. Criar o projeto no Supabase
 
 1. Acesse https://supabase.com.
@@ -17,6 +19,8 @@ Este guia explica como configurar o Supabase para autenticação real no fronten
 
 Depois que o projeto terminar de provisionar, você poderá configurar as variáveis do frontend e criar a tabela de perfis.
 
+---
+
 ## 2. Encontrar as variáveis do frontend
 
 No painel do Supabase:
@@ -28,6 +32,8 @@ No painel do Supabase:
 
 - `VITE_SUPABASE_URL`: use o valor de **Project URL**.
 - `VITE_SUPABASE_ANON_KEY`: use o valor de **anon public key**.
+
+---
 
 ## 3. Configurar `frontend/.env`
 
@@ -47,138 +53,122 @@ Depois de alterar variáveis de ambiente do Vite, reinicie o servidor de desenvo
 - Pressione **Ctrl + C** para parar o servidor.
 - Digite `npm run dev` e pressione Enter para reiniciar.
 
-## 4. Criar tabela `profiles`
+---
 
-Esta tabela armazena as informações de perfil de cada usuário (nome, e-mail e cargo/role).
+## 4. Criar todas as tabelas do banco de dados
 
-No Supabase:
+O projeto possui **dois scripts SQL** que configuram tudo automaticamente:
 
-1. Abra **SQL Editor** (no menu lateral esquerdo, é o ícone com símbolo de código `>_`).
-2. Crie uma nova query (clique em **New query**).
-3. Copie **todo** o SQL abaixo e cole no editor. Depois clique em **Run** (botão verde no canto inferior direito).
+| Script | O que faz |
+|--------|-----------|
+| `setup_database.sql` | Cria as tabelas, regras de segurança (RLS), permissões e funções auxiliares. |
+| `seed_demo_data.sql` | Cria os usuários de teste, projetos e vínculos. |
 
-```sql
-create table public.profiles (
-  id uuid primary key references auth.users(id) on delete cascade,
-  name text not null,
-  email text not null unique,
-  role text not null check (
-    role in ('admin', 'technical-leader', 'behavioral-leader', 'employee')
-  ),
-  created_at timestamptz default now()
-);
-```
+### Passo 4.1 — Criar a estrutura (`setup_database.sql`)
 
-> **O que esse SQL faz:** Cria uma tabela chamada `profiles` que guarda o ID do usuário (ligado ao sistema de login), nome, e-mail e cargo. Se um usuário for deletado do login, o perfil dele também é removido automaticamente (`on delete cascade`).
+1. Abra o arquivo `setup_database.sql` que está na **raiz do projeto** (pasta principal).
+2. No Supabase, abra o **SQL Editor** (menu lateral esquerdo, ícone com símbolo `>_`).
+3. Clique em **New query**.
+4. Copie **todo** o conteúdo do arquivo `setup_database.sql` e cole no editor.
+5. Clique no botão verde **Run**.
+6. Se aparecer "Success. No rows returned", deu certo!
 
-## 5. Ativar Row Level Security
+> **Esse script cria:** as tabelas `profiles`, `projects`, `roles`, `project_members`, `questions`, `evaluations` e `final_evaluations`, junto com todas as regras de segurança (RLS), função `get_my_role()`, triggers e permissões.
 
-Row Level Security (RLS) é uma proteção do banco de dados que impede que um usuário acesse dados de outro. **É obrigatório ativá-lo.**
+### Passo 4.2 — Popular com dados de demonstração (`seed_demo_data.sql`)
 
-No SQL Editor, execute:
+1. No SQL Editor, clique em **New query** (uma nova query, não a mesma).
+2. Abra o arquivo `seed_demo_data.sql` (também na raiz do projeto).
+3. Copie **todo** o conteúdo e cole no editor.
+4. Clique em **Run**.
 
-```sql
-alter table public.profiles enable row level security;
-```
+Esse script cria automaticamente:
+- 11 usuários com login funcional (senha: `Empresa@2026`)
+- 11 cargos (roles)
+- 5 projetos de exemplo
+- Vínculos entre colaboradores e projetos
 
-> Após ativar o RLS, ninguém consegue ler dados da tabela até que você crie "políticas" (rules) dizendo quem pode ver o quê. É isso que faremos nos passos 6 e 7.
+> **Importante:** Você **NÃO** precisa criar usuários manualmente na aba "Authentication > Users" do Supabase. O script já insere os registros diretamente nas tabelas `auth.users` e `auth.identities`, que é o equivalente a criar um usuário pela interface.
 
-## 6. Policy para usuário ler o próprio perfil
+**Após executar, os seguintes usuários estarão disponíveis para login:**
 
-Esta regra permite que cada usuário veja **apenas o próprio perfil** (nome, e-mail, cargo). Ele não consegue ver dados de outras pessoas.
+| Usuário | E-mail | Senha | Cargo |
+|---------|--------|-------|-------|
+| Administrador | admin@empresa.com | Empresa@2026 | admin |
+| Líder Técnico | tech@empresa.com | Empresa@2026 | technical-leader |
+| Líder Comportamental | rh@empresa.com | Empresa@2026 | behavioral-leader |
+| Colaborador | colaborador@empresa.com | Empresa@2026 | employee |
+| Ana Silva | ana.silva@empresa.com | Empresa@2026 | employee |
+| Carlos Mendes | carlos.mendes@empresa.com | Empresa@2026 | employee |
+| Julia Costa | julia.costa@empresa.com | Empresa@2026 | employee |
+| Pedro Alves | pedro.alves@empresa.com | Empresa@2026 | employee |
+| Mariana Lima | mariana.lima@empresa.com | Empresa@2026 | employee |
+| Roberto Santos | roberto.santos@empresa.com | Empresa@2026 | employee |
+| Lucia Ferreira | lucia.ferreira@empresa.com | Empresa@2026 | employee |
 
-No SQL Editor, execute:
+**Validação:** No menu lateral do Supabase, abra **Table Editor**. Você deve ver as tabelas populadas. Em **Authentication > Users**, devem aparecer os 11 usuários.
 
-```sql
-create policy "Users can read own profile"
-on public.profiles
-for select
-using (auth.uid() = id);
-```
+---
 
-## 7. Policy para admin ler todos os perfis
+## 5. Explicação do que os scripts fazem
 
-Esta regra permite que usuários com cargo `admin` vejam **todos** os perfis. Isso é necessário para o administrador gerenciar os funcionários.
+O `setup_database.sql` cria:
 
-No SQL Editor, execute:
+| Componente | Descrição |
+|------------|-----------|
+| Tabela `profiles` | Nome, e-mail e cargo de cada usuário. Vinculada ao login (`auth.users`). |
+| Tabela `projects` | Projetos da empresa (nome, descrição, status). |
+| Tabela `roles` | Cargos disponíveis (Desenvolvedor, Designer, etc.). |
+| Tabela `project_members` | Vínculos entre funcionários e projetos. |
+| Tabela `questions` | Perguntas de avaliação técnica/comportamental. |
+| Tabela `evaluations` | Feedbacks mensais registrados por líderes. |
+| Tabela `final_evaluations` | Avaliação consolidada semestral. |
+| Função `get_my_role()` | Função auxiliar que evita recursão nas policies de segurança. |
+| Policies (RLS) | Regras de quem pode ver/editar cada tabela. |
+| Triggers | Atualiza `updated_at` automaticamente ao editar registros. |
+| Permissões | Garante que o Supabase funcione corretamente com as tabelas. |
 
-```sql
-create policy "Admins can read all profiles"
-on public.profiles
-for select
-using (
-  exists (
-    select 1
-    from public.profiles
-    where id = auth.uid()
-    and role = 'admin'
-  )
-);
-```
+O `seed_demo_data.sql` cria:
 
-## 8. SQL completo
+| Componente | Descrição |
+|------------|-----------|
+| Usuários em `auth.users` | 11 usuários com login funcional (equivalente a criar manualmente em Authentication > Users). |
+| Identidades em `auth.identities` | Necessário para o login por e-mail/senha funcionar. |
+| Perfis em `profiles` | Define o cargo de cada usuário no sistema. |
+| Cargos em `roles` | 11 cargos usados nos projetos. |
+| Projetos em `projects` | 5 projetos de exemplo. |
+| Membros em `project_members` | Vínculos entre colaboradores e projetos. |
 
-```sql
-create table public.profiles (
-  id uuid primary key references auth.users(id) on delete cascade,
-  name text not null,
-  email text not null unique,
-  role text not null check (
-    role in ('admin', 'technical-leader', 'behavioral-leader', 'employee')
-  ),
-  created_at timestamptz default now()
-);
+---
 
-alter table public.profiles enable row level security;
+## 6. Recomeçar do zero (opcional)
 
-create policy "Users can read own profile"
-on public.profiles
-for select
-using (auth.uid() = id);
-
-create policy "Admins can read all profiles"
-on public.profiles
-for select
-using (
-  exists (
-    select 1
-    from public.profiles
-    where id = auth.uid()
-    and role = 'admin'
-  )
-);
-```
-
-## 9. Criar usuários
-
-No Supabase:
-
-1. Acesse **Authentication**.
-2. Abra **Users**.
-3. Clique em **Add user**.
-4. Informe o e-mail e a senha.
-5. Confirme a criação do usuário.
-6. Copie o `User UID` gerado. Ele será usado como `id` na tabela `profiles`.
-
-## 10. Inserir perfil com role
-
-Depois de criar o usuário em **Authentication > Users**, insira o perfil correspondente na tabela `profiles`.
-
-Exemplo:
+Se precisar limpar tudo e começar de novo:
 
 ```sql
-insert into public.profiles (id, name, email, role)
-values (
-  'USER_UID_AQUI',
-  'Nome do Usuario',
-  'usuario@empresa.com',
-  'employee'
-);
+-- 1. Dropar tabelas
+DROP TABLE IF EXISTS public.final_evaluations CASCADE;
+DROP TABLE IF EXISTS public.evaluations CASCADE;
+DROP TABLE IF EXISTS public.project_members CASCADE;
+DROP TABLE IF EXISTS public.questions CASCADE;
+DROP TABLE IF EXISTS public.roles CASCADE;
+DROP TABLE IF EXISTS public.projects CASCADE;
+DROP TABLE IF EXISTS public.profiles CASCADE;
+
+-- 2. Dropar funções
+DROP FUNCTION IF EXISTS public.get_my_role();
+DROP FUNCTION IF EXISTS public.set_updated_at();
+
+-- 3. Limpar usuários de auth
+DELETE FROM auth.identities;
+DELETE FROM auth.users;
 ```
 
-Substitua `USER_UID_AQUI` pelo `User UID` do usuário criado no Supabase Auth.
+Depois é só executar `setup_database.sql` e `seed_demo_data.sql` novamente.
 
-## 11. Roles aceitas
+---
+
+## 7. Roles aceitas
 
 A coluna `role` aceita apenas:
 
@@ -189,12 +179,16 @@ A coluna `role` aceita apenas:
 
 Essas roles controlam o redirecionamento após login:
 
-- `admin` -> `/admin`
-- `technical-leader` -> `/technical-leader`
-- `behavioral-leader` -> `/behavioral-leader`
-- `employee` -> `/employee`
+| Role | Redireciona para |
+|------|-----------------|
+| `admin` | `/admin` |
+| `technical-leader` | `/technical-leader` |
+| `behavioral-leader` | `/behavioral-leader` |
+| `employee` | `/employee` |
 
-## 12. Proteção por role no frontend
+---
+
+## 8. Proteção por role no frontend
 
 O frontend usa `profiles.role` para duas decisões:
 
@@ -206,18 +200,20 @@ O Supabase Auth gerencia a sessão do usuário automaticamente. Você **não** p
 As permissões de rota no frontend seguem esta regra:
 
 - `admin`: acessa as rotas de admin, como `/admin`, `/admin/roles`, `/admin/questions` e `/admin/reports`.
-- `technical-leader`: acessa as rotas tecnicas, como `/technical-leader` e `/technical-leader/evaluate/:projectId/:employeeId`.
+- `technical-leader`: acessa as rotas técnicas, como `/technical-leader` e `/technical-leader/evaluate/:projectId/:employeeId`.
 - `behavioral-leader`: acessa as rotas comportamentais, como `/behavioral-leader` e `/behavioral-leader/evaluate/:projectId/:employeeId`.
 - `employee`: acessa as rotas de colaborador, como `/employee` e `/employee/history`.
 
-A protecao no frontend melhora a experiencia e evita navegacao indevida, mas nao substitui seguranca no banco. Row Level Security (RLS) continua obrigatorio no Supabase para proteger dados, queries e operacoes diretamente na base.
+A proteção no frontend melhora a experiência e evita navegação indevida, mas não substitui segurança no banco. Row Level Security (RLS) continua obrigatório no Supabase para proteger dados diretamente na base.
 
-## 13. Testar login, logout e proteção de rotas
+---
+
+## 9. Testar login, logout e proteção de rotas
 
 1. Configure `frontend/.env` (veja passo 3).
 2. Reinicie o servidor Vite: no terminal, pressione **Ctrl + C** para parar, depois digite `npm run dev` e pressione Enter.
 3. Abra a aplicação no navegador (geralmente http://localhost:5173).
-4. Faça login com o e-mail e senha criados em **Authentication > Users**.
+4. Faça login com qualquer usuário da tabela acima (ex: `admin@empresa.com` / `Empresa@2026`).
 5. Confirme se o usuário é redirecionado para a rota correta conforme a role em `profiles`.
 6. Clique em **Sair** em um dashboard.
 7. Confirme que o logout redireciona para `/`.
