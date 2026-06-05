@@ -1,6 +1,6 @@
-# [Projeto de feedback] – Gestão de Desempenho 🚀
+# MESA REVIEW – Gestão de Desempenho 🚀
 
-Este projeto foi desenvolvido como parte da **Residência Tecnológica do Programa Embarque Digital (2º Período)**, em parceria com a empresa **Mesa Tech**. O sistema foi projetado para otimizar o processo de avaliação de desempenho através de ciclos mensais de registro de fatos e uma consolidação semestral de resultados.
+O MESA REVIEW foi desenvolvido como parte da **Residência Tecnológica do Programa Embarque Digital (2º Período)**, em parceria com a empresa **Mesa Tech**. O sistema foi projetado para otimizar o processo de avaliação de desempenho através de ciclos mensais de registro de fatos e uma consolidação semestral de resultados.
 
 ## 📌 Sobre o Projeto
 O sistema visa eliminar a subjetividade nas avaliações tradicionais. Através de interfaces segmentadas, líderes técnicos e comportamentais realizam registros mensais de pontos positivos e de atenção, que culminam em uma nota consolidada a cada seis meses, com peso equilibrado (50% técnica / 50% comportamental).
